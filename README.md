@@ -38,7 +38,10 @@ cpp-optimization-lab/
 │
 ├─ .clang-format
 ├─ .editorconfig
+├─ .gitattributes            # Git 文本文件与行尾规则
 ├─ .gitignore
+├─ AGENTS.md                 # Codex 审阅与仓库维护约定
+├─ CMakeSettings.json        # Visual Studio 的 Debug / Release 配置
 └─ CMakeLists.txt
 ```
 
@@ -65,14 +68,19 @@ cpp-optimization-lab/
 
 ## 初始化构建目录
 
-在仓库根目录执行：
+在已配置好 C++ 编译器、且 `cmake` 可从 `PATH` 调用的终端中，进入仓库根目录执行：
 
 ```bash
 cmake -S . -B build
 cmake --build build --config Release
 ```
 
-目前仓库只有项目骨架，没有可执行程序。添加源码和目标后才会产生可执行文件。
+使用 Visual Studio 的“打开本地文件夹”工作流时，也可以直接选择
+`CMakeSettings.json` 中的 `x64-Debug` 或 `x64-Release` 配置。性能实验应使用
+`x64-Release`。
+
+目前 CMake 配置只创建 `cpp_lab_common` 这个 header-only `INTERFACE` target；Project01
+尚无可执行程序、测试或 benchmark target。因此构建成功时不会产生可执行文件。
 
 ## 建议的 Git 工作流
 
@@ -118,6 +126,7 @@ refactor: ...
 - [x] 建立仓库基础结构
 - [x] 建立 Project00 Common 骨架
 - [x] 建立 Project01 Batch Oscillator 骨架
+- [x] 配置 Visual Studio 的 Debug / Release 构建
 - [ ] 添加 Project00 第一批公共组件
 - [ ] 完成 Project01 正确性基线
 - [ ] 完成 Project01 第一次性能对比
