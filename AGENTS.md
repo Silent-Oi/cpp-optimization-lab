@@ -112,19 +112,61 @@
 - `Project00_common` 是公共基础层，不是独立物理项目。
 - 只有至少被两个项目需要，或明确属于通用实验基础设施的内容，才适合放入 Common。
 - 振子、热传导、稀疏矩阵等领域对象应留在各自项目中。
-- 当前代码标准为 C++17。
+- 当前代码标准为 C++20。
 - 构建系统使用 CMake。
 - 优先保持依赖最少，当前阶段不主动添加第三方库。
 - 新的构建产物、IDE 缓存和本地实验结果不应提交到 Git。
 
 ## 构建与检查
 
-在仓库根目录进行 CMake 配置和构建：
+### 当前 Windows / MSVC 环境
 
-```bash
-cmake -S . -B build
-cmake --build build --config Release
+本机使用 Visual Studio Community 2026，MSVC x64 开发环境脚本位于：
+
+```text
+D:\Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat
 ```
+
+Codex 的普通 PowerShell 进程中可能可以找到 `cmake`，但不能直接找到 `cl`。
+配置或构建前，应在同一个 `cmd.exe` 子进程中调用 `vcvars64.bat`。本仓库的
+`CMakeSettings.json` 使用 Ninja，并将 Release 构建树放在
+`out\build\x64-Release`。
+
+在仓库根目录执行以下命令进行 Release 配置和构建：
+
+```powershell
+cmd.exe /d /c 'call "D:\Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat" && cmake -S . -B out\build\x64-Release -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build out\build\x64-Release'
+```
+
+只需增量构建时执行：
+
+```powershell
+cmd.exe /d /c 'call "D:\Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat" && cmake --build out\build\x64-Release'
+```
+
+根目录的 `CMakeSettings.json` 由整个仓库共用。新增 `ProjectXX` 时，通常只需在根
+`CMakeLists.txt` 中添加对应的 `add_subdirectory(...)`，并在项目自己的
+`CMakeLists.txt` 中定义目标，不要为每个项目重复创建新的 `CMakeSettings.json`。
+
+所有项目共用 `out\build\<配置>` 构建树；每个项目的编译产物放在与源码目录同名的
+构建子目录中：
+
+```text
+out\build\<配置>\<Project目录>\<目标文件>
+```
+
+例如 Project01 的 Release 可执行文件生成在：
+
+```text
+out\build\x64-Release\Project01_batch_oscillator\project01_oscillator.exe
+```
+
+不要在同一个 build directory 中混用 Ninja 和 Visual Studio generator。当前 Codex
+进程可能同时带有 `Path` 和 `PATH` 两个环境变量；Visual Studio/MSBuild generator
+可能因此报 `MSB6001` duplicate-key 错误。出现该错误时优先使用上面的 Ninja 命令，
+不要误判为 MSVC 未安装。
+
+`out/`、`build/` 等目录是可重新生成的构建产物，不是源码依赖，也不应提交到 Git。
 
 审阅代码时可以运行不会修改源码的命令，例如：
 
