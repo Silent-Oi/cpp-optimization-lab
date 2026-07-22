@@ -3,7 +3,6 @@
 #include <stdexcept>
 #include "state.h"
 
-
 namespace oscillator {
     HarmonicOscillator::HarmonicOscillator(double angular_frequency)
     : angular_frequency_{angular_frequency}

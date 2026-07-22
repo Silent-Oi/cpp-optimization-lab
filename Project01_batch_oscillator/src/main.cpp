@@ -3,14 +3,19 @@
 #include <numbers>
 #include <iostream>
 #include "time_integrators.h"
+#include "test_harmonic_oscillator.h"
 
 int main()
 {
+    oscillator::test_derivative_energy();
+    oscillator::test_exact_state();
+    oscillator::test_time_integrators();
+
     // 实验参数：dt 取一个振动周期的固定比例。
     const double omega = 2.0 * std::numbers::pi;
     const double cycle = 2 * std::numbers::pi / omega;
-    const int steps = 20000000;
-    const double fit = 0.0001;
+    const int steps = 123456;
+    const double fit = 0.001;
     const double dt = fit * cycle;
     const double time = dt * steps;
 

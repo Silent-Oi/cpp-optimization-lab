@@ -1,8 +1,8 @@
 #pragma once
 #include "state.h"
 
-namespace oscillator {
-
+namespace oscillator
+{
    // 归一化的一维简谐振子，满足 x'' = -omega^2 * x。
    // 该类只保存系统参数，不保存随时间变化的状态。
    class HarmonicOscillator {
