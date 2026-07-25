@@ -17,7 +17,7 @@
 3. `docs/roadmap.md` 中的能力递进关系。
 4. 当前子项目 `README.md` 中的范围和核心里程碑。
 5. 当前子项目的 `docs/progress_checklist.md`、`docs/design.md` 和 `docs/experiment_plan.md`。
-6. 学习者维护的 `docs/learning_log.md`，它用于说明当前理解和计划，不覆盖更高层项目边界。
+6. 学习者维护的 `docs/learning_logs/<里程碑>/learning_log.md`，它用于说明当前理解和计划，不覆盖更高层项目边界。
 
 发现冲突时先说明冲突及影响，不静默选择一份文档覆盖另一份，也不为了让 checkbox 看起来完整而改变项目目标。
 
@@ -73,7 +73,7 @@
 - 根据 TODO 生成完整答案。
 - 主动创建或修改业务源码。
 - 为了通过构建而隐藏设计问题或跳过解释。
-- 代写、改写或整理学习者的 `docs/learning_log.md` 正文。
+- 代写、改写或整理学习者的 `docs/learning_logs/<里程碑>/learning_log.md` 正文。
 
 学习者明确要求参考实现时，仍应先解释设计选择，并尽量只展示与当前学习点直接相关的最小实现。
 
@@ -147,7 +147,7 @@
 
 ### 检查顺序
 
-1. 当前项目 `docs/learning_log.md` 中最新记录；旧项目若尚未迁移，可读取明确标注的 legacy learning log。
+1. 当前项目 `docs/learning_logs/<当前里程碑>/learning_log.md` 中最新记录；需要核对里程碑衔接时再读取上一里程碑记录，旧项目若尚未迁移，可读取明确标注的 legacy learning log。
 2. `git status` 和相关 `git diff`。
 3. 当天新增或修改的代码与文档。
 4. 当前项目 `docs/progress_checklist.md`。
@@ -200,7 +200,7 @@
 - 当前标准为 C++20，构建系统使用 CMake。
 - 当前阶段优先减少依赖，不主动添加第三方库。
 - 构建产物、IDE 缓存和本地原始实验结果不提交 Git。
-- 子项目学习日志统一使用 `docs/learning_log.md`，由学习者维护。
+- 子项目学习日志按里程碑存放在 `docs/learning_logs/<里程碑>/learning_log.md`，相关图片等附件放在同目录的 `assets/`，均由学习者维护。
 
 ## 仓库维护模式
 
@@ -250,10 +250,12 @@ cmd.exe /d /c 'call "D:\Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.b
 cmd.exe /d /c 'call "D:\Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat" && cmake --build out\build\x64-Release'
 ```
 
-所有项目共用 `out\build\<配置>`。例如 Project01 Release 可执行文件位于：
+所有项目共用 `out\build\<配置>`。Project01 当前 Release 可执行文件位于：
 
 ```text
-out\build\x64-Release\Project01_batch_oscillator\project01_oscillator.exe
+out\build\x64-Release\Project01_batch_oscillator\harmonic_oscillator.exe
+out\build\x64-Release\Project01_batch_oscillator\underdamped_oscillator.exe
+out\build\x64-Release\Project01_batch_oscillator\oscillator_tests.exe
 ```
 
 不要在同一 build directory 混用 Ninja 和 Visual Studio generator。若 Visual Studio/MSBuild generator 因 `Path` 与 `PATH` 重复报告 `MSB6001`，优先使用上述 Ninja 命令，不要误判为 MSVC 未安装。

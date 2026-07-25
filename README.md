@@ -68,7 +68,7 @@
 | `docs/progress_checklist.md` | 当前状态和里程碑证据 | 长篇理论说明、未来课程大全 |
 | `docs/design.md` | 已作出的设计决定及理由 | 待办事项列表 |
 | `docs/experiment_plan.md` | 项目特有的实验假设与顺序 | 通用 benchmark 规则 |
-| `docs/learning_log.md` | 学习者自己的理解、问题与反思 | Codex 代写的项目总结 |
+| `docs/learning_logs/<里程碑>/learning_log.md` | 学习者在对应里程碑中的理解、问题与反思 | Codex 代写的项目总结 |
 | `docs/experiments/` | 可提交、可复现的实验报告 | 大体积原始输出 |
 | `results/` | 本地原始数据和临时结果 | 唯一一份实验结论 |
 
@@ -86,7 +86,6 @@ cpp-optimization-lab/
 ├─ Project00_common/              # 公共基础层
 ├─ Project01_batch_oscillator/    # 当前学习项目
 ├─ docs/                          # 总路线与通用模板
-├─ results/                       # 根级本地实验输出（默认忽略）
 ├─ AGENTS.md                      # Codex 教学和项目管理规则
 ├─ CMakeLists.txt
 └─ CMakeSettings.json

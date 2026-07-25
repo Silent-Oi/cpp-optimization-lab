@@ -35,7 +35,7 @@ void expect_state_near(const State& actual, const State& expected,
 
 }  // namespace
 
-void test_exact_state() {
+void test_harmonic_exact_state() {
     const double omega = 2.0 * std::numbers::pi;
     const double cycle = 2.0 * std::numbers::pi / omega;
     const HarmonicOscillator system(omega);
@@ -47,7 +47,7 @@ void test_exact_state() {
                       "exact state after one period");
 }
 
-void test_derivative_energy() {
+void test_harmonic_derivative_energy() {
     const HarmonicOscillator system(2.0);
     const State state{.position = 3.0, .velocity = -4.0};
 
@@ -57,7 +57,7 @@ void test_derivative_energy() {
     expect_near(system.system_energy(state), 26.0, "mechanical energy");
 }
 
-void test_time_integrators() {
+void test_harmonic_time_integrators() {
     const double dt = 0.1;
     const HarmonicOscillator system(2.0);
     const State initial_state{.position = 3.0, .velocity = -4.0};

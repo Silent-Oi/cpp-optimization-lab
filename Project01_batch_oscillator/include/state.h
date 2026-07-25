@@ -15,8 +15,8 @@ struct State {
     }
 };
 
-    // State 的时间导数：(dx/dt, dv/dt)。
-    // 使用独立类型，避免把变化率误当成实际状态值。
+// State 的时间导数：(dx/dt, dv/dt)。
+// 使用独立类型，避免把变化率误当成实际状态值。
 struct StateDerivative {
     double position_rate;
     double velocity_rate;
@@ -28,10 +28,20 @@ struct StateDerivative {
                std::abs(velocity_rate - other.velocity_rate) < eps;
     }
 };
-    // Position Verlet 所需的两个连续位置。
-    // current_position 表示 x_n，previous_position 表示 x_{n-1}。
-    struct PositionVerletState {
-        double current_position;
-        double previous_position;
-    };
+// Position Verlet 所需的两个连续位置。
+// current_position 表示 x_n，previous_position 表示 x_{n-1}。
+struct PositionVerletState {
+    double current_position;
+    double previous_position;
+};
+
+// 欠阻尼振子的精确一步状态转移矩阵：
+// [x_{n+1}, v_{n+1}]^T = M * [x_n, v_n]^T。
+// 固定系统参数和 dt 时，这四个系数可在时间循环外预计算并重复使用。
+struct StepCoefficients {
+    double m00;
+    double m01;
+    double m10;
+    double m11;
+};
 }

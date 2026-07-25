@@ -108,5 +108,5 @@
 - 进度：`docs/progress_checklist.md`
 - 设计决定：`docs/design.md`
 - 实验计划：`docs/experiment_plan.md`
-- 学习记录：`docs/learning_log.md`
+- 学习记录：`docs/learning_logs/<里程碑>/learning_log.md`
 - 实验报告：`docs/experiments/`
