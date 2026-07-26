@@ -122,11 +122,12 @@ cmd.exe /d /c 'call "D:\Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.b
 ```text
 harmonic_oscillator    -> out\build\x64-Release\Project01_batch_oscillator\harmonic_oscillator.exe
 underdamped_oscillator -> out\build\x64-Release\Project01_batch_oscillator\underdamped_oscillator.exe
+oscillator_batch       -> out\build\x64-Release\Project01_batch_oscillator\oscillator_batch.exe
 oscillator_tests       -> out\build\x64-Release\Project01_batch_oscillator\oscillator_tests.exe
 ```
 
-`oscillator_tests` 是当前独立测试入口。正式 benchmark target 建立后再补充对应命令，
-不在 README 中虚构尚不存在的 target。
+`oscillator_batch` 是 M2 的批量功能与压力运行入口，`oscillator_tests` 是独立测试入口。
+正式 benchmark target 建立后再补充对应命令，不在 README 中虚构尚不存在的 target。
 
 ## 文档与目录
 
@@ -134,9 +135,8 @@ oscillator_tests       -> out\build\x64-Release\Project01_batch_oscillator\oscil
 Project01_batch_oscillator/
 ├─ include/                   # 状态、模型和时间更新接口
 ├─ src/                       # 可复用的模型和更新实现
-├─ apps/                      # 无阻尼与欠阻尼实验程序入口
+├─ apps/                      # 单振子与 AoS 批量功能/压力运行入口
 ├─ tests/                     # 正确性与回归测试
-├─ benchmarks/                # 性能测量驱动
 ├─ docs/
 │  ├─ progress_checklist.md   # 当前状态与完成证据
 │  ├─ design.md               # 已作出的设计决定
@@ -144,9 +144,11 @@ Project01_batch_oscillator/
 │  ├─ learning_logs/          # 按里程碑保存的学习者原始记录与附件
 │  │  ├─ M0/
 │  │  │  └─ learning_log.md
-│  │  └─ M1/
-│  │     ├─ learning_log.md
-│  │     └─ assets/
+│  │  ├─ M1/
+│  │  │  ├─ learning_log.md
+│  │  │  └─ assets/
+│  │  └─ M2/
+│  │     └─ learning_log.md
 │  └─ experiments/            # 可提交的实验报告
 ├─ results/                   # 本地原始实验输出，默认忽略
 └─ CMakeLists.txt

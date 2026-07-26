@@ -2,35 +2,14 @@
 #include "underdamped_oscillator.h"
 #include "state.h"
 #include "harmonic_oscillator.h"
+#include "test_common.h"
 
 
 #include <cmath>
 #include <numbers>
-#include <sstream>
-#include <stdexcept>
-#include <string>
+
 
 namespace oscillator {
-const double tolerance = 1e-12;
-
-// 使用统一绝对容差比较标量；失败时抛出包含期望值和实际值的异常。
-void expect_near(double actual, double expected, const std::string& quantity) {
-    if (std::abs(actual - expected) <= tolerance) {
-        return;
-    }
-
-    std::ostringstream message;
-    message.precision(17);
-    message << quantity << ": expected " << expected << ", got " << actual;
-    throw std::runtime_error(message.str());
-}
-
-// 分别比较 State 的位置和速度，并在错误信息中保留测试名称。
-void expect_state_near(const State& actual, const State& expected, const std::string& test_name) {
-    expect_near(actual.position, expected.position, test_name + " position");
-    expect_near(actual.velocity, expected.velocity, test_name + " velocity");
-}
-
 
 void test_underdamped_exact_state() {
     // 检查解析公式在 t=0 时能否严格恢复给定的初始状态。

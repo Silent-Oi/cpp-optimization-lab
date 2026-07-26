@@ -44,4 +44,27 @@ struct StepCoefficients {
     double m10;
     double m11;
 };
+
+struct OscillatorAoS {
+    double position;
+    double velocity;
+
+    double omega;
+    double zeta;
+
+    double m00;
+    double m01;
+    double m10;
+    double m11;
+};
+
+struct AoSResults {
+    std::size_t N;
+    double state_checksum;
+    double max_abs_x;
+    double max_abs_v;
+    bool finite;
+};
+
+
 }

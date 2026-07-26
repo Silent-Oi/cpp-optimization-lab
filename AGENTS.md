@@ -255,6 +255,7 @@ cmd.exe /d /c 'call "D:\Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.b
 ```text
 out\build\x64-Release\Project01_batch_oscillator\harmonic_oscillator.exe
 out\build\x64-Release\Project01_batch_oscillator\underdamped_oscillator.exe
+out\build\x64-Release\Project01_batch_oscillator\oscillator_batch.exe
 out\build\x64-Release\Project01_batch_oscillator\oscillator_tests.exe
 ```
 

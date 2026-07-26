@@ -12,3 +12,4 @@
 
 - [`m0_harmonic_long_term.md`](m0_harmonic_long_term.md)：无阻尼时间积分器的长期行为记录。
 - [`m1_underdamped_long_term.md`](m1_underdamped_long_term.md)：单个欠阻尼振子的长期行为记录。
+- [`m2_aos_batch_long_term.md`](m2_aos_batch_long_term.md)：AoS 批量固定输入的功能与压力运行记录。

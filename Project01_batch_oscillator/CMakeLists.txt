@@ -1,5 +1,6 @@
 add_library(oscillator_core
     src/harmonic_oscillator.cpp
+    src/oscillator_batch.cpp
     src/time_integrators.cpp
     src/underdamped_oscillator.cpp
 )
@@ -32,27 +33,45 @@ target_link_libraries(underdamped_oscillator
     PRIVATE oscillator_core
 )
 
-# 测试程序
-add_executable(oscillator_tests
-    tests/test_main.cpp
-    tests/test_harmonic_oscillator.cpp
-    tests/test_underdamped_oscillator.cpp
-    tests/test_underdamped_oscillator.h
+# AoS 批量功能与压力实验
+add_executable(oscillator_batch
+    apps/oscillator_batch_main.cpp
 )
 
-target_include_directories(oscillator_tests
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/tests
-)
-
-target_link_libraries(oscillator_tests
+target_link_libraries(oscillator_batch
     PRIVATE oscillator_core
 )
+
+if(CPP_LAB_BUILD_TESTS)
+    add_executable(oscillator_tests
+        tests/test_common.cpp
+        tests/test_common.h
+        tests/test_harmonic_oscillator.cpp
+        tests/test_harmonic_oscillator.h
+        tests/test_main.cpp
+        tests/test_oscillator_batch.cpp
+        tests/test_oscillator_batch.h
+        tests/test_underdamped_oscillator.cpp
+        tests/test_underdamped_oscillator.h
+    )
+
+    target_include_directories(oscillator_tests
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests
+    )
+
+    target_link_libraries(oscillator_tests
+        PRIVATE oscillator_core
+    )
+endif()
 
 # Project01 源码包含中文注释；明确要求 MSVC 按 UTF-8 解析源文件。
 if(MSVC)
     target_compile_options(oscillator_core PRIVATE /utf-8)
     target_compile_options(harmonic_oscillator PRIVATE /utf-8)
     target_compile_options(underdamped_oscillator PRIVATE /utf-8)
-    target_compile_options(oscillator_tests PRIVATE /utf-8)
+    target_compile_options(oscillator_batch PRIVATE /utf-8)
+    if(CPP_LAB_BUILD_TESTS)
+        target_compile_options(oscillator_tests PRIVATE /utf-8)
+    endif()
 endif()
