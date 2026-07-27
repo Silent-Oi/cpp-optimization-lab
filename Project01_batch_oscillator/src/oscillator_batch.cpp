@@ -1,10 +1,9 @@
-#include "oscillator_batch.h"
-
 #include <cmath>
 #include <random>
 #include <stdexcept>
 #include <vector>
 
+#include "oscillator_batch.h"
 #include "state.h"
 #include "underdamped_oscillator.h"
 
@@ -14,6 +13,7 @@ OscillatorBatch make_OscillatorAoS_batch(int number, double dt, int seed) {
     if (number < 0) {
         throw std::invalid_argument("oscillator number must be non-negative");
     }
+    // 固定 seed 使同一实现环境中的输入可复现；每个振子拥有独立状态和参数。
     std::mt19937 gen(seed);
     std::uniform_real_distribution<double> position_uniform(-1, 1);
     std::uniform_real_distribution<double> velocity_uniform(-1, 1);
@@ -24,6 +24,7 @@ OscillatorBatch make_OscillatorAoS_batch(int number, double dt, int seed) {
         double omega = omega_uniform(gen);
         double zeta = zeta_uniform(gen);
         UnderdampedOscillator system(omega, zeta);
+        // 演化系数只在初始化阶段计算一次。
         StepCoefficients step_coefficients = system.make_step_coefficients(dt);
 
         OscillatorAoS oscillator{.position = position_uniform(gen),
@@ -41,6 +42,8 @@ OscillatorBatch make_OscillatorAoS_batch(int number, double dt, int seed) {
 
 void update_aos_batch_step(OscillatorBatch& aos_batch) {
     for (auto& oscillator : aos_batch) {
+        // 两个新分量必须都由同一个旧状态计算；写回前保存在局部变量中，
+        // 避免 velocity 错误地使用已经更新的 position。
         double position =
             oscillator.m00 * oscillator.position + oscillator.m01 * oscillator.velocity;
         double velocity =
@@ -54,6 +57,7 @@ void update_aos_batch(OscillatorBatch& aos_batch, int step) {
     if (step < 0) {
         throw std::invalid_argument("step must be non-negative");
     }
+    // 热路径只连续遍历并调用预计算矩阵，不分配内存，也不修改原始参数和系数。
     for (int i = 0; i < step; ++i) {
         update_aos_batch_step(aos_batch);
     };
@@ -66,6 +70,7 @@ AoSResults aos_batch_report(OscillatorBatch& aos_batch_updated) {
     double max_abs_v = 0.0;
     bool finite = 1;
     for (auto& oscillator : aos_batch_updated) {
+        // checksum 压缩全部状态，max 值和 finite 则帮助识别发散或非有限结果。
         state_checksum += oscillator.position + 0.5 * oscillator.velocity;
         if (std::abs(oscillator.position) > max_abs_x) {
             max_abs_x = std::abs(oscillator.position);

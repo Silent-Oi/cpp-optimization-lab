@@ -7,7 +7,7 @@ struct State {
     double position;
     double velocity;
 
-    // 使用固定绝对容差比较两个状态，供当前验证代码判断近似相等。
+    // 使用固定绝对容差比较两个状态。
     bool operator==(const State& other) const {
         constexpr double eps = 1e-9;
         return std::abs(position - other.position) < eps &&
@@ -37,7 +37,7 @@ struct PositionVerletState {
 
 // 欠阻尼振子的精确一步状态转移矩阵：
 // [x_{n+1}, v_{n+1}]^T = M * [x_n, v_n]^T。
-// 固定系统参数和 dt 时，这四个系数可在时间循环外预计算并重复使用。
+// 转矩矩阵只和dt以及振子属性有关。
 struct StepCoefficients {
     double m00;
     double m01;
@@ -45,6 +45,9 @@ struct StepCoefficients {
     double m11;
 };
 
+// AoS元素：一个对象完整保存一个振子的全部数据。
+// position、velocity 是每步更新的状态；omega、zeta 是初始化后不变的原始参数；
+// m00～m11 是由原始参数和固定 dt 预计算得到的更新系数。
 struct OscillatorAoS {
     double position;
     double velocity;
@@ -58,6 +61,7 @@ struct OscillatorAoS {
     double m11;
 };
 
+// 对一次批量运行结果的紧凑摘要，用于固定输入运行和回归检查。
 struct AoSResults {
     std::size_t N;
     double state_checksum;

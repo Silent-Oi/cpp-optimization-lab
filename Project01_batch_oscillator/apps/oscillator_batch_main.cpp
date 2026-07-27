@@ -5,6 +5,8 @@
 #include <iomanip>
 
 int main() {
+    // M2 使用固定规模、步长和 seed 做可复现的功能/压力运行；
+    // 这里只记录结果，不据此形成正式性能结论。
     const double dt = 0.013;
     const int step = 1000;
     const int number = 1000000;
@@ -15,7 +17,7 @@ int main() {
 
     oscillator::AoSResults result = oscillator::aos_batch_report(oscillator_aos_batch);
     
-
+    // 同时输出运行条件和结果摘要，便于不同运行之间核对输入是否一致。
     std::cout << std::setprecision(10) << "seed: " << seed << '\n';
     std::cout << std::setprecision(10) << "N: " << result.N << '\n';
     std::cout << std::setprecision(10) << "step: " << step << '\n';

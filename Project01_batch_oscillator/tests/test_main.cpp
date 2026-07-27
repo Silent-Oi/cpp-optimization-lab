@@ -13,7 +13,7 @@ int main() {
     oscillator::test_underdamped_exact_state_step();
     oscillator::test_zero_damping();
 
-
+    // M2 AoS batch 的规模、空批量、单元素和小批量回归测试。
     oscillator::test_batch_number();
     oscillator::test_zero_batch_and_update();
     oscillator::test_batch_aos();

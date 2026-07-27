@@ -3,7 +3,7 @@ add_library(oscillator_core
     src/oscillator_batch.cpp
     src/time_integrators.cpp
     src/underdamped_oscillator.cpp
-)
+ "benchmarks/aos_benchmark.cpp")
 
 target_include_directories(oscillator_core
     PUBLIC
@@ -42,11 +42,27 @@ target_link_libraries(oscillator_batch
     PRIVATE oscillator_core
 )
 
-if(CPP_LAB_BUILD_TESTS)
-    add_executable(oscillator_tests
-        tests/test_common.cpp
-        tests/test_common.h
-        tests/test_harmonic_oscillator.cpp
+
+
+
+
+add_executable(oscillator_aos_benchmark
+        benchmarks/aos_benchmark.cpp
+    )
+
+target_link_libraries(oscillator_aos_benchmark
+        PRIVATE oscillator_core
+    )
+
+
+
+
+
+
+add_executable(oscillator_tests
+    tests/test_common.cpp
+    tests/test_common.h
+    tests/test_harmonic_oscillator.cpp
         tests/test_harmonic_oscillator.h
         tests/test_main.cpp
         tests/test_oscillator_batch.cpp
@@ -55,7 +71,7 @@ if(CPP_LAB_BUILD_TESTS)
         tests/test_underdamped_oscillator.h
     )
 
-    target_include_directories(oscillator_tests
+target_include_directories(oscillator_tests
         PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/tests
     )
@@ -63,7 +79,7 @@ if(CPP_LAB_BUILD_TESTS)
     target_link_libraries(oscillator_tests
         PRIVATE oscillator_core
     )
-endif()
+
 
 # Project01 源码包含中文注释；明确要求 MSVC 按 UTF-8 解析源文件。
 if(MSVC)
@@ -71,7 +87,6 @@ if(MSVC)
     target_compile_options(harmonic_oscillator PRIVATE /utf-8)
     target_compile_options(underdamped_oscillator PRIVATE /utf-8)
     target_compile_options(oscillator_batch PRIVATE /utf-8)
-    if(CPP_LAB_BUILD_TESTS)
         target_compile_options(oscillator_tests PRIVATE /utf-8)
-    endif()
+        target_compile_options(oscillator_aos_benchmark PRIVATE /utf-8)
 endif()

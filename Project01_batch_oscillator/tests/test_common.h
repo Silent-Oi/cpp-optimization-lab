@@ -10,7 +10,7 @@ void expect_near(double actual, double expected, const std::string& quantity);
 // 分别比较 State 的位置和速度，并在错误信息中保留测试名称。
 void expect_state_near(const State& actual, const State& expected, const std::string& test_name);
 
-// 分布比较 OscillatorAoS 的全部参数，并在错误信息中保留测试名称。
+// 逐字段比较 OscillatorAoS 的状态、原始参数和派生系数。
 void expect_aos_near(const OscillatorAoS& actual, const OscillatorAoS& expected,
                            const std::string& test_name);
 

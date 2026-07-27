@@ -134,7 +134,7 @@
 
 ## Benchmark 边界
 
-- [ ] 在 `benchmarks/` 建立独立的 AoS benchmark 入口和 CMake target，并受 `CPP_LAB_BUILD_BENCHMARKS` 控制。
+- [ ] 在 `benchmarks/` 建立独立的 AoS benchmark 入口和 CMake target。
 - [ ] 保留现有 `oscillator_batch` 作为 M2 功能/压力示例；benchmark 不复制或改写 `update_aos_batch()` 的核心算法。
 - [ ] benchmark 直接复用 `make_OscillatorAoS_batch()`、`update_aos_batch()` 和 `aos_batch_report()`。
 - [ ] 本项目先在 benchmark 驱动中直接使用 `std::chrono::steady_clock`，不因单个项目提前实现 `Project00_common` 的通用 timer。
