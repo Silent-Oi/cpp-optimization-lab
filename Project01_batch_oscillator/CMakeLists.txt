@@ -3,7 +3,7 @@ add_library(oscillator_core
     src/oscillator_batch.cpp
     src/time_integrators.cpp
     src/underdamped_oscillator.cpp
- "benchmarks/aos_benchmark.cpp")
+ "benchmarks/aos_batch_benchmark.cpp")
 
 target_include_directories(oscillator_core
     PUBLIC
@@ -44,7 +44,7 @@ target_link_libraries(oscillator_batch
 
 
 add_executable(oscillator_aos_benchmark
-        benchmarks/aos_benchmark.cpp
+        "benchmarks/aos_batch_benchmark.cpp"
     )
 
 target_link_libraries(oscillator_aos_benchmark
