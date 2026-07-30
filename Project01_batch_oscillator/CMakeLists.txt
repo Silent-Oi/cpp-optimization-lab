@@ -43,9 +43,6 @@ target_link_libraries(oscillator_batch
 )
 
 
-
-
-
 add_executable(oscillator_aos_benchmark
         benchmarks/aos_benchmark.cpp
     )
@@ -53,9 +50,6 @@ add_executable(oscillator_aos_benchmark
 target_link_libraries(oscillator_aos_benchmark
         PRIVATE oscillator_core
     )
-
-
-
 
 
 

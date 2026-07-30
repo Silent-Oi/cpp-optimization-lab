@@ -1,15 +1,18 @@
-# M2 AoS batch 固定输入运行记录
+# M3 aos_batch_benchmark 固定输入运行测试记录
 
-> 本记录用于保存 M2 固定输入的功能与压力运行结果，不作为正式性能 benchmark 或性能结论。
+> 本记录用于保存 M3 简单实现aos_batch_benchmark的功能，不作为正式性能 benchmark 或性能结论。
 
-## 运行 1
+## 运行 1 07-31
 
 ```text
-seed: 12345
+x64-Release
+seed: 1234
 N: 1000000
 step: 1000
-state_checksum: -51.44446068
-max_abs_x: 1.782492685
-max_abs_v: 4.566032267
+counts: 1000000000
+runtime: 2.1650637
+state_checksum: -30.17267841
+max_abs_x: 1.622832011
+max_abs_v: 3.859915105
 finite: 1
 ```
