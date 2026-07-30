@@ -1,6 +1,6 @@
 # Project01 设计记录
 
-本文只记录已经接受的设计决定、仍待决定的问题和变化原因。任务状态由 `progress_checklist.md` 管理，学习过程由 `learning_logs/<里程碑>/learning_log.md` 记录。
+本文只记录已经接受的设计决定、仍待决定的问题和变化原因。任务状态由 `progress_checklist.md` 管理，学习过程由 `learning_logs/<里程碑>/learning_log.md` 记录，源码结构和流程草图保存在 [`diagrams/`](diagrams/)。
 
 ## 已接受的项目决定
 

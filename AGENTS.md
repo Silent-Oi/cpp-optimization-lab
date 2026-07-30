@@ -201,6 +201,7 @@
 - 当前阶段优先减少依赖，不主动添加第三方库。
 - 构建产物、IDE 缓存和本地原始实验结果不提交 Git。
 - 子项目学习日志按里程碑存放在 `docs/learning_logs/<里程碑>/learning_log.md`，相关图片等附件放在同目录的 `assets/`，均由学习者维护。
+- 源码结构、数据流和 benchmark 流程等可视化草图统一放在子项目 `docs/diagrams/`；已经接受的决定及理由仍记录在 `docs/design.md`。
 
 ## 仓库维护模式
 
@@ -256,6 +257,7 @@ cmd.exe /d /c 'call "D:\Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.b
 out\build\x64-Release\Project01_batch_oscillator\harmonic_oscillator.exe
 out\build\x64-Release\Project01_batch_oscillator\underdamped_oscillator.exe
 out\build\x64-Release\Project01_batch_oscillator\oscillator_batch.exe
+out\build\x64-Release\Project01_batch_oscillator\oscillator_aos_benchmark.exe
 out\build\x64-Release\Project01_batch_oscillator\oscillator_tests.exe
 ```
 

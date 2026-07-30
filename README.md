@@ -67,6 +67,7 @@
 | 子项目 `README.md` | 项目定位、范围、里程碑和使用方式 | 详细 checkbox、每日学习记录 |
 | `docs/progress_checklist.md` | 当前状态和里程碑证据 | 长篇理论说明、未来课程大全 |
 | `docs/design.md` | 已作出的设计决定及理由 | 待办事项列表 |
+| `docs/diagrams/` | 源码结构、数据流和实验流程的可视化草图 | 已接受设计决定的唯一记录 |
 | `docs/experiment_plan.md` | 项目特有的实验假设与顺序 | 通用 benchmark 规则 |
 | `docs/learning_logs/<里程碑>/learning_log.md` | 学习者在对应里程碑中的理解、问题与反思 | Codex 代写的项目总结 |
 | `docs/experiments/` | 可提交、可复现的实验报告 | 大体积原始输出 |

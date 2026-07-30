@@ -123,11 +123,13 @@ cmd.exe /d /c 'call "D:\Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.b
 harmonic_oscillator    -> out\build\x64-Release\Project01_batch_oscillator\harmonic_oscillator.exe
 underdamped_oscillator -> out\build\x64-Release\Project01_batch_oscillator\underdamped_oscillator.exe
 oscillator_batch       -> out\build\x64-Release\Project01_batch_oscillator\oscillator_batch.exe
+oscillator_aos_benchmark
+                       -> out\build\x64-Release\Project01_batch_oscillator\oscillator_aos_benchmark.exe
 oscillator_tests       -> out\build\x64-Release\Project01_batch_oscillator\oscillator_tests.exe
 ```
 
 `oscillator_batch` 是 M2 的批量功能与压力运行入口，`oscillator_tests` 是独立测试入口。
-正式 benchmark target 建立后再补充对应命令，不在 README 中虚构尚不存在的 target。
+`oscillator_aos_benchmark` 是 M3 的 AoS benchmark 驱动；正式性能结论以可复现实验报告为准。
 
 ## 文档与目录
 
@@ -136,10 +138,12 @@ Project01_batch_oscillator/
 ├─ include/                   # 状态、模型和时间更新接口
 ├─ src/                       # 可复用的模型和更新实现
 ├─ apps/                      # 单振子与 AoS 批量功能/压力运行入口
+├─ benchmarks/                # 独立的性能测量驱动
 ├─ tests/                     # 正确性与回归测试
 ├─ docs/
 │  ├─ progress_checklist.md   # 当前状态与完成证据
 │  ├─ design.md               # 已作出的设计决定
+│  ├─ diagrams/               # 源码结构、数据流与 benchmark 流程图
 │  ├─ experiment_plan.md      # Project01 特有实验顺序
 │  ├─ learning_logs/          # 按里程碑保存的学习者原始记录与附件
 │  │  ├─ M0/
