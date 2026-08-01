@@ -2,6 +2,8 @@
 
 本文只描述 Project01 特有的实验顺序和假设。通用测量字段、原始数据表和结论格式使用根目录 [`docs/benchmark_record_template.md`](../../docs/benchmark_record_template.md)。
 
+V1 的详细路线由 [`visualization_plan.md`](visualization_plan.md) 管理；visualizer 不属于正式性能测量流程，其帧率也不作为核心性能证据。
+
 ## 实验进入顺序
 
 ```text

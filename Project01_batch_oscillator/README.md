@@ -77,8 +77,6 @@ dv/dt = -2*zeta*omega*v - omega^2*x
 - 临界阻尼和过阻尼的完整实现。
 - 线程池、无锁结构、自定义分配器或复杂 SIMD 封装。
 - 为了复用而提前把振子领域对象放入 `Project00_common`。
-- 在 V1 中使用 OpenGL、Vulkan、DirectX、shader、GPU 绘制、GUI 框架、字体系统、多窗口或复杂参数编辑界面。
-- 通用 renderer、scene、window wrapper、图形抽象层，或提前把窗口与软件绘制代码放入 `Project00_common`。
 
 ## 正确性策略
 
@@ -92,96 +90,13 @@ dv/dt = -2*zeta*omega*v - omega^2*x
 
 ## 可观察性与可视化
 
-### 定位与时序
+V1 的作用，是让批量状态和阻尼衰减成为可直接观察的 Project01 核心成果。最终最小画面是：核心接口推进完整 batch，显示端以固定、均匀、可复现且覆盖整个 batch 的索引抽样，实时绘制振子点阵；`position` 映射为单元内水平偏移，`velocity` 映射为颜色或亮度。
 
-Project01 增加独立并行支线 **V1 — 实时可视化与软件绘制入门**。建议在 M3 完成后开始，最迟在 M6 项目总结前完成。
+架构上，V1 与性能实验相互独立；实际学习执行时不与 M3、M4 同时施工。当前先完成 M3，再连续完成与其假设直接相连的 M4，随后完成 V1，并在 M6 前收口。若 M5 被证据触发，另行安排且不与 V1 同时推进。性能主线的正确性、benchmark 和报告门槛不因 V1 改变。
 
-V1 是 Project01 最终必须留下的核心成果之一，但不是 M3 benchmark、M4 数据布局实验或后续性能项目的正确性与技术前置条件。性能主线仍按 M3 → M4 → 条件并行实验 → 项目总结推进；V1 不承担 AoS/SoA 性能比较，也不能用画面流畅度形成核心计算性能结论。
+visualizer 只作为 `oscillator_core` 的独立使用者，不能复制振子算法；tests 继续承担正确性验证，独立 benchmark 继续承担性能测量。绘制、交互和帧率位于正式计时之外，画面流畅度不能形成核心性能结论。V1 不建设 GUI 框架、字体系统、多窗口、通用 renderer 或 GPU API 路线。
 
-### 最终最小成果：实时振子点阵
-
-最终画面不是只显示一个振子，而是使用现有批量计算得到实时振子点阵：
-
-- 屏幕划分为规则网格，每个显示单元代表一个被抽样的振子。
-- 单元中心表示平衡位置，光点相对中心的水平位移表示 `position`。
-- 颜色或亮度表示 `velocity` 的方向和大小。
-- 随模拟推进，可以直接观察不同振子的阻尼振荡和逐渐衰减。
-- 核心计算可以使用百万规模 batch，显示端只绘制与窗口大小匹配的数百至一千个代表性振子。
-
-计算数量与显示数量必须分离：
-
-```text
-计算：完整 batch，可达到百万规模
-显示：固定数量的代表性振子，依据窗口大小确定
-```
-
-显示索引必须均匀、固定、可复现并覆盖整个 batch，不能默认只取前若干个元素。单个振子动画只是接入核心计算和校准坐标映射的中间步骤，不是 V1 最终成果。
-
-### 第一版技术路线
-
-- 使用 RGFW 创建窗口、处理输入事件并显示像素缓冲。
-- 使用 CPU 软件绘制和 RGBA 像素缓冲，通过 `RGFW_surface` 与窗口 blit 显示结果。
-- RGFW 只属于未来的 `oscillator_visualizer` target，不进入 `oscillator_core`。
-- 实施 V1 时固定 RGFW 版本或 commit，并保留对应许可证；具体依赖导入方式到 V1 开始时确认。
-- RGFW implementation 只在一个翻译单元中实例化，visualizer 自己维护最小的软件绘制代码。
-
-`oscillator_visualizer` 目前只是规划中的 target；本次没有添加 RGFW、源码、目录或 CMake 配置。
-
-### 职责边界
-
-规划中的依赖关系为：
-
-```text
-oscillator_core
-├── apps
-├── tests
-├── benchmark
-└── oscillator_visualizer
-
-oscillator_visualizer
-├── 调用 oscillator_core
-├── RGFW 窗口与事件
-└── visualizer 自己的软件绘制代码
-```
-
-- visualizer 直接复用现有批量初始化和更新接口，不复制振子公式或维护第二套算法。
-- 核心数据类型不包含 RGFW、窗口、颜色、像素或帧记录类型；抽样索引、坐标、颜色和显示状态由 visualizer 管理。
-- 只有实际实现证明现有只读访问方式不足时，才讨论最小核心观察接口；规划阶段不设计 snapshot 框架。
-- 绘制、事件轮询、帧率限制、截图和交互全部位于正式 benchmark 计时之外。
-- AoS/SoA、向量化和线程扩展性继续由独立 benchmark 以固定条件测量。
-
-### 模拟时间与最小交互
-
-V1 必须区分固定物理时间步 `dt`、模拟推进次数、现实经过时间和画面刷新帧率。第一版可以每帧推进固定步数，但完成 V1 前应理解并记录固定时间步 accumulator 的作用，不能让显示器帧率静默改变模拟时间语义，也不能为了维持帧率修改核心物理公式。
-
-核心交互限定为：
-
-- `Space`：暂停与继续。
-- `Right Arrow`：暂停时单步推进。
-- `R`：恢复相同 seed 和参数下的初始状态。
-- `Escape`：退出。
-
-### V1 高层完成标准
-
-1. 建立最小 RGFW 窗口并显示纯色 RGBA 像素缓冲。
-2. 能够清屏、安全写入像素并绘制小型光点或矩形。
-3. 使用现有核心接口完成单个振子的坐标映射和阻尼衰减观察。
-4. 使用完整 batch 计算和确定性抽样完成实时振子点阵，并记录实际可运行规模或硬件限制。
-5. 完成暂停、单步、重置和退出，保存至少一张代表截图以及一段 GIF 或短视频。
-6. 在实现完成后更新 README 的实际构建、运行和观看说明。
-
-正式运行展示素材计划保存在 `docs/showcase/`；该目录目前尚未创建。这里的程序截图、GIF 和短视频不同于 `docs/diagrams/` 中的设计图，也不同于 `docs/learning_logs/<里程碑>/assets/` 中的学习过程附件。
-
-### 主画面完成后的条件扩展
-
-只有 V1 核心成果已经完成，并且扩展仍有明确学习价值时，才考虑：
-
-- 选定振子的相空间轨迹。
-- 无阻尼和阻尼行为的并列对比。
-- 位移、能量或振幅衰减曲线。
-- 按 `omega` 或 `zeta` 映射颜色。
-- 更复杂的交互参数编辑。
-- GPU 绘制。
+V1 的唯一详细实施路线见 [`docs/visualization_plan.md`](docs/visualization_plan.md)。
 
 ## 核心里程碑
 
@@ -193,7 +108,7 @@ V1 必须区分固定物理时间步 `dt`、模拟推进次数、现实经过时
 6. **条件并行实验**：满足进入条件时研究简单分块和线程扩展性；不满足时记录不做的原因。
 7. **项目总结**：保留正确性证据、实验报告、主要结论和可迁移经验。
 
-V1 不插入或重新编号上述性能里程碑。它可以在 M3 完成后与 M4 或后续工作并行，但必须在项目总结完成前达到自身核心完成标准。
+V1 不插入或重新编号上述性能里程碑。架构上它与性能实验相互独立；实际学习顺序为先完成 M3，再完成 M4，随后完成 V1，并在 M6 项目总结前达到自身核心完成标准。条件并行实验若被触发，应另行安排而不与 V1 同时推进。
 
 详细状态见 [`docs/progress_checklist.md`](docs/progress_checklist.md)。
 
@@ -228,7 +143,6 @@ oscillator_tests       -> out\build\x64-Release\Project01_batch_oscillator\oscil
 
 `oscillator_batch` 是 M2 的批量功能与压力运行入口，`oscillator_tests` 是独立测试入口。
 `oscillator_aos_benchmark` 是 M3 的 AoS benchmark 驱动；正式性能结论以可复现实验报告为准。
-规划中的 `oscillator_visualizer` 尚不是当前 CMake target；应在 V1 实施开始后再添加和记录实际构建、运行命令。
 
 ## 文档与目录
 
@@ -239,12 +153,10 @@ Project01_batch_oscillator/
 ├─ apps/                      # 单振子与 AoS 批量功能/压力运行入口
 ├─ benchmarks/                # 独立的性能测量驱动
 ├─ tests/                     # 正确性与回归测试
-├─ visualization/             # 独立可视化模块
-├─ third_party/               # 第三方依赖
-│  └─ RGFW/ 
 ├─ docs/
 │  ├─ progress_checklist.md   # 当前状态与完成证据
 │  ├─ design.md               # 已作出的设计决定
+│  ├─ visualization_plan.md   # V1 唯一详细实施路线
 │  ├─ diagrams/               # 源码结构、数据流与 benchmark 流程图
 │  ├─ experiment_plan.md      # Project01 特有实验顺序
 │  ├─ learning_logs/          # 按里程碑保存的学习者原始记录与附件
@@ -259,5 +171,3 @@ Project01_batch_oscillator/
 ├─ results/                   # 本地原始实验输出，默认忽略
 └─ CMakeLists.txt
 ```
-
-V1 计划新增的 `docs/showcase/` 当前也不属于现有目录；只有开始保存正式运行展示素材时才创建。
