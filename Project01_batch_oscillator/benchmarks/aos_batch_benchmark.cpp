@@ -9,6 +9,7 @@
 #include "state.h"
 
 
+namespace benchmark {
 struct BenchResults {
     int current_cycle;
     std::uint64_t counts;
@@ -17,7 +18,7 @@ struct BenchResults {
     double update_nanosecond_per_oscillator_step;
     oscillator::AoSResults aos_batch_results;
 };
-
+}  // namespace benchmark
 
 int main() {
     // 初始化参数
@@ -36,7 +37,7 @@ int main() {
     oscillator::update_aos_batch(warmup_batch, step);
 
     // 计时batch更新
-    std::vector<BenchResults> all_bench_results(cycle);
+    std::vector<benchmark::BenchResults> all_bench_results(cycle);
     for (int i = 0; i < cycle; ++i) {
         oscillator::OscillatorBatch benchmark_oscillator_aos_batch = initial_oscillator_aos_batch;
         const auto start = std::chrono::steady_clock::now();
@@ -51,7 +52,7 @@ int main() {
         {
             throw std::runtime_error("振子更新结果异常");
         }
-        const BenchResults current_bench_results = {
+        const benchmark::BenchResults current_bench_results = {
             .current_cycle = i,
             .counts = counts,
             .run_time_second = run_time_second,

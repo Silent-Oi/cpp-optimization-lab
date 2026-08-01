@@ -1,5 +1,4 @@
 #pragma once
-#include <chrono>
 #include <cmath>
 
 namespace oscillator {
@@ -78,12 +77,4 @@ struct AoSResults {
     }
 };
 
-struct BenchResults {
-    int current_cycle;
-    std::uint64_t counts;
-    double run_time_second;
-    double update_oscillator_per_second;
-    double update_nanosecond_per_oscillator_step;
-    AoSResults aos_batch_results;
-};
 }  // namespace oscillator
