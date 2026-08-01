@@ -1,4 +1,5 @@
 #pragma once
+#include <chrono>
 #include <cmath>
 
 namespace oscillator {
@@ -68,7 +69,21 @@ struct AoSResults {
     double max_abs_x;
     double max_abs_v;
     bool finite;
+
+    bool operator==(const AoSResults& other) const {
+        constexpr double eps = 1e-9;
+        return N == other.N && std::abs(state_checksum - other.state_checksum) < eps &&
+               std::abs(max_abs_x - other.max_abs_x) < eps &&
+               std::abs(max_abs_v - other.max_abs_v) < eps && finite == other.finite;
+    }
 };
 
-
-}
+struct BenchResults {
+    int current_cycle;
+    std::uint64_t counts;
+    double run_time_second;
+    double update_oscillator_per_second;
+    double update_nanosecond_per_oscillator_step;
+    AoSResults aos_batch_results;
+};
+}  // namespace oscillator
