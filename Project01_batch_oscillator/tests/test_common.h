@@ -14,4 +14,8 @@ void expect_state_near(const State& actual, const State& expected, const std::st
 void expect_aos_near(const OscillatorAoS& actual, const OscillatorAoS& expected,
                            const std::string& test_name);
 
+void expect_soa_near(const OscillatorSoABatch& actual, const OscillatorSoABatch& expected,
+                     const std::string& test_name);
+
+
 }  // namespace oscillator

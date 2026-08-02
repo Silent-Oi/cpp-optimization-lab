@@ -1,5 +1,6 @@
 #pragma once
 #include <cmath>
+#include <vector>
 
 namespace oscillator {
 // 单个振子在同一物理时刻的位置和速度。
@@ -62,19 +63,36 @@ struct OscillatorAoS {
 };
 
 // 对一次批量运行结果的紧凑摘要，用于固定输入运行和回归检查。
-struct AoSResults {
+struct BatchResults {
     std::size_t N;
     double state_checksum;
     double max_abs_x;
     double max_abs_v;
     bool finite;
 
-    bool operator==(const AoSResults& other) const {
+    bool operator==(const BatchResults& other) const {
         constexpr double eps = 1e-9;
         return N == other.N && std::abs(state_checksum - other.state_checksum) < eps &&
                std::abs(max_abs_x - other.max_abs_x) < eps &&
                std::abs(max_abs_v - other.max_abs_v) < eps && finite == other.finite;
     }
 };
+
+struct OscillatorSoABatch {
+    std::vector<double> position;
+    std::vector<double> velocity;
+
+    std::vector<double> m00;
+    std::vector<double> m01;
+    std::vector<double> m10;
+    std::vector<double> m11;
+
+    std::vector<double> omega;
+    std::vector<double> zeta;
+};
+
+
+
+
 
 }  // namespace oscillator

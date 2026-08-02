@@ -42,13 +42,22 @@ target_link_libraries(oscillator_batch
     PRIVATE oscillator_core
 )
 
+# AoS benchmark 独立于功能示例和测试，避免输出与计时代码进入 oscillator_core。
 add_executable(oscillator_aos_benchmark
-    benchmarks/aos_batch_benchmark.cpp
+    "benchmarks/aos_batch_benchmark.cpp"
 )
 
 target_link_libraries(oscillator_aos_benchmark
     PRIVATE oscillator_core
 )
+
+target_compile_definitions(
+    oscillator_aos_benchmark
+    PRIVATE
+        # 让 benchmark 无论从哪个构建目录启动，都把工作 CSV 写到固定源码子目录。
+        PROJECT01_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
 
 add_executable(oscillator_tests
     tests/test_common.cpp

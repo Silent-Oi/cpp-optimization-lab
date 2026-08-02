@@ -48,13 +48,11 @@
 当前正在进行：
 
 - [`Project01_batch_oscillator`](Project01_batch_oscillator/README.md)：批量欠阻尼振子计算、C++ 性能优化入门与相空间星云可视化。
-- [`NOW.md`](NOW.md)：打开仓库后首先阅读，里面只保留当前代码任务。
 
 ## 仓库结构
 
 ```text
 cpp-optimization-lab/
-├─ NOW.md                        # 当前唯一活动任务
 ├─ Project00_common/             # 出现真实复用需求后再加入公共组件
 ├─ Project01_batch_oscillator/   # 当前项目
 ├─ docs/roadmap.md               # 通往两个确定目标的技术路线

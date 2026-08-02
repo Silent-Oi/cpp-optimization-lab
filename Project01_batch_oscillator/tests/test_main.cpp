@@ -16,5 +16,5 @@ int main() {
     // M2 AoS batch 的规模、空批量、单元素和小批量回归测试。
     oscillator::test_batch_number();
     oscillator::test_zero_batch_and_update();
-    oscillator::test_batch_aos();
+    oscillator::test_batch();
 }

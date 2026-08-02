@@ -52,16 +52,17 @@ v_next = c * x + d * v
 
 四个系数在初始化时计算，热循环只更新状态。
 
-## 固定技术路线
+## 技术路线
 
-### 1. 单振子与正确性基线 — 已完成
+
+### 1. 单振子与正确性基线
 
 - 无阻尼解析解与积分器学习
 - 欠阻尼解析状态
 - 固定 `dt` 的精确一步系数
 - 单步、多步和零阻尼回归测试
 
-### 2. AoS 批量 baseline — 已完成
+### 2. AoS 批量 baseline 
 
 - `std::vector<OscillatorAoS>` 连续存储
 - 可复现初始化
@@ -69,14 +70,13 @@ v_next = c * x + d * v
 - 与标量参考一致
 - 大规模结果 checksum
 
-### 3. AoS benchmark — 当前
+### 3. AoS benchmark
 
 - 合理控制不同规模的运行量
 - 预热和重复测量
 - 输出吞吐量与每次更新时间
 - 观察性能随工作集规模的变化
 
-当前入口见根目录 [`NOW.md`](../NOW.md)。
 
 ### 4. SoA 与编译器优化
 
@@ -104,13 +104,9 @@ v_next = c * x + d * v
 
 Project01 完成时应当：
 
-- 能正确更新百万级欠阻尼振子。
-- 有 AoS 与 SoA 的实际性能比较。
-- 能解释主要性能差异来自哪里，以及证据边界在哪里。
-- 能运行相空间星云并看到旋转与阻尼收缩。
-- 能解释核心计算、benchmark 和 visualizer 为什么分离。
+- 能批量计算大量欠阻尼振子的运动状态。
+- 能把计算状态实时画成欠阻尼振子相空间星云。
 
-不要求正式实验报告、CSV 数据库、完整 ODE 框架、临界/过阻尼支持、手写 SIMD 或通用图形框架。
 
 ## 代码结构
 
@@ -123,7 +119,6 @@ Project01_batch_oscillator/
 ├─ benchmarks/    # 性能测量入口
 ├─ docs/
 │  ├─ design.md
-│  ├─ progress_checklist.md
 │  ├─ visualization_plan.md
 │  └─ learning_logs/   # 自愿学习记录
 └─ CMakeLists.txt

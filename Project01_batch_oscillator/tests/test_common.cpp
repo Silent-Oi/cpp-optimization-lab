@@ -39,6 +39,23 @@ void expect_aos_near(const OscillatorAoS& actual, const OscillatorAoS& expected,
     expect_near(actual.m11, expected.m11, test_name + " m11");
 }
 
+void expect_soa_near(const OscillatorSoABatch& actual, const OscillatorSoABatch& expected,
+                     const std::string& test_name) {
+    std::size_t N = actual.omega.size();
+    for (std::size_t i = 0; i < N; ++i) {
+        expect_near(actual.position[i], expected.position[i], test_name + " position");
+        expect_near(actual.velocity[i], expected.velocity[i], test_name + " velocity");
+        expect_near(actual.omega[i], expected.omega[i], test_name + " omega");
+        expect_near(actual.zeta[i], expected.zeta[i], test_name + " zeta");
+        expect_near(actual.m00[i], expected.m00[i], test_name + " m00");
+        expect_near(actual.m01[i], expected.m01[i], test_name + " m01");
+        expect_near(actual.m10[i], expected.m10[i], test_name + " m10");
+        expect_near(actual.m11[i], expected.m11[i], test_name + " m11");
+    }
 
+
+
+
+}
 
 }  // namespace oscillator
