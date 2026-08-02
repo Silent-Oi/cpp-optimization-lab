@@ -4,6 +4,7 @@
 #include <random>
 #include <stdexcept>
 #include <vector>
+#include <cstdlib>
 
 #include "state.h"
 #include "underdamped_oscillator.h"
