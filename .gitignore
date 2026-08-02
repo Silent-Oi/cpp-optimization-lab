@@ -60,3 +60,4 @@ Project*/results/*
 /Project01_batch_oscillator/benchmarks/results/aos_benchmark.csv
 /Project01_batch_oscillator/benchmarks/results/soa_benchmark.csv
 /Project01_batch_oscillator/docs/experiments/AoSBatch 振子计算时间步与数据量规模的关系.md
+/AGENTS.md
