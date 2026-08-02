@@ -33,6 +33,7 @@ int main() {
     // std::vector<int> numbers = {256, 512, 768, 1'000, 10'000, 100'000, 1'000'000};
     std::vector<int> numbers = {256, 256, 256, 256};
     std::vector<int> steps = {100, 1'000, 10'000, 100'000};
+    const int step = 100;
     if (numbers.size() != steps.size()) {
         throw std::invalid_argument("振子数量维度和计算布维度不一致");
     }
@@ -50,12 +51,12 @@ int main() {
 
         // 预热
         oscillator::OscillatorBatch warmup_batch = initial_oscillator_aos_batch;
-        oscillator::update_aos_batch(warmup_batch, steps[j]);
+        oscillator::update_aos_batch(warmup_batch, step);
 
         for (int i = 0; i < cycle; ++i) {
             oscillator::OscillatorBatch working_oscillator_aos_batch = initial_oscillator_aos_batch;
             const auto start = std::chrono::steady_clock::now();
-            oscillator::update_aos_batch(working_oscillator_aos_batch, steps[j]);
+            oscillator::update_aos_batch(working_oscillator_aos_batch, step);
             const auto end = std::chrono::steady_clock::now();
             const auto run_time_second = std::chrono::duration<double>(end - start).count();
 
