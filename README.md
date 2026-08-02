@@ -6,40 +6,21 @@
 
 ## 项目目标
 
-### 中期目标：稀疏矩阵与高性能数值求解
+中期目标：稀疏矩阵与高性能数值求解
 
-实现并理解：
-
-- CSR 稀疏矩阵存储
-- Sparse Matrix-Vector Multiplication（SpMV）
-- Conjugate Gradient（CG）
-- 简单预条件
-- Matrix-free operator
-- 二维 Poisson 方程求解
-
-这一阶段将数值算法、数据结构、内存访问与 CPU 性能分析连接起来。
-
-### 最终目标：高性能 CPU 路径追踪器
-
-完成一个包含以下能力的 CPU 路径追踪器：
-
-- 三角形网格与材质系统
-- 光线与几何求交
-- Monte Carlo 随机采样
-- BVH 空间加速结构
-- 多线程并行渲染
-- 缓存、数据布局与热点循环优化
-
-这个项目将综合使用数学、物理、现代 C++、空间数据结构与 CPU 性能优化。
+最终目标：高性能 CPU 路径追踪器
 
 ## 当前项目
 
 ### [Project01 — Batch Oscillator](Project01_batch_oscillator/README.md)
 
-批量计算大量参数不同的欠阻尼振子，并将它们的状态绘制成相空间星云。
+批量计算大量参数不同的欠阻尼振子。
 
 ## 技术路线
+
 ### [Roadmap](docs/roadmap.md) ###
+
+## 完成项目
 
 ## 仓库结构
 

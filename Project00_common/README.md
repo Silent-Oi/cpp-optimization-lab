@@ -33,9 +33,6 @@ cpp_lab_common
 
 当前没有需要编译的公共源文件，也没有独立可执行程序。
 
-当前也没有已经投入使用的公共功能组件：`include/timer.hpp.h` 只有占位内容，
-`src/`、`tests/` 和 `benchmarks/` 仅保留空目录占位，尚未接入 CMake。
-
 ## 使用方式
 
 子项目可以通过 CMake 链接公共 target：
@@ -54,15 +51,12 @@ target_link_libraries(
 
 ```text
 Project00_common/
-├─ include/       # 公共头文件；当前只有占位内容
-├─ src/           # 当前为空，尚未接入 CMake
-├─ tests/         # 当前为空，尚未接入 CMake
-├─ benchmarks/    # 当前为空，尚未接入 CMake
+├─ include/       # 公共头文件
 ├─ CMakeLists.txt
 └─ README.md
 ```
 
-当未来出现真正共享的实现代码时，再把相应目录接入编译型 library、测试或 benchmark target。
+当未来出现真正共享的实现代码时，可以再加入 `src/` 和编译型 library target。
 
 ## 设计原则
 

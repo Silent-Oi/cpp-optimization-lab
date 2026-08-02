@@ -6,7 +6,7 @@
 
 项目目标：
 
-> **高效计算并画出可视化运动状态**
+> **高性能大量欠阻尼振子运作状态演化**
 
 ## 目标实现
 
@@ -15,15 +15,6 @@ Project01 由两个相互连接的部分组成。
 ### 批量振子计算
 
 程序能够初始化并连续更新大量参数不同的欠阻尼振子。
-
-性能主线包括：
-
-- 标量参考实现
-- 连续批量存储
-- AoS 与 SoA 数据布局
-- 工作集规模与缓存层级
-- 编译器自动向量化
-- 多线程连续分块
 
 ### 相空间星云
 
@@ -36,14 +27,6 @@ vertical   = velocity / omega
 
 大量振子共同形成旋转、展开并逐渐向原点收缩的星云。
 
-可视化部分将引入：
-
-- 物理坐标到屏幕坐标的映射
-- CPU 像素缓冲
-- 粒子绘制与拖尾
-- 窗口和事件循环
-- 仿真时间与帧时间
-- 计算层与显示层分离
 
 ## 项目设计
 [`docs/design.md`](docs/design.md)
@@ -52,19 +35,17 @@ vertical   = velocity / omega
 
 ### 已完成实验
 
-Benchmark 对 AoS 和 SoA 执行相同的批量规模扫描，并记录每个规模的平均值和中位数：
+Benchmark 通过计算每个振子单步更新需要的时间来判断性能
 
-```text
-time per oscillator-step (ns)
-```
 
 1. AoS 与 SoA 数据布局对性能的影响
 2. 输入数据规模对性能的影响
 
 ### 计划实验
 
-1. Cache blocking 对多步批量更新的缓存局部性和性能影响
-2. 多线程
+1. 数据布局设计对性能的影响
+2. Cache blocking 对多步批量更新的缓存局部性和性能影响
+3. 多线程对性能的影响
 
 ## 当前进展
 
@@ -117,7 +98,6 @@ Project01_batch_oscillator/
 ├─ tests/         # 正确性与回归测试
 ├─ benchmarks/    # benchmark相关文件
 ├─ docs/          # 项目相关文档
-├─ visualizer/    # 可视化
 ├─ CMakeLists.txt
 └─ README.md
 ```
@@ -132,8 +112,6 @@ oscillator_batch
 oscillator_benchmark
 oscillator_tests
 ```
-
-`oscillator_benchmark` 会依次运行 AoS 和 SoA benchmark。
 
 可视化程序会使用独立 target，避免窗口、绘制和帧率逻辑进入核心计算库或 benchmark 计时区间。
 
