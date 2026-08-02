@@ -13,7 +13,7 @@ int main() {
     const int seed = 12345;
 
     // aos_batch
-    oscillator::OscillatorBatch oscillator_aos_batch =
+    oscillator::OscillatorAoSBatch oscillator_aos_batch =
         oscillator::make_oscillator_aos_batch(number, dt, seed);
     oscillator::update_aos_batch(oscillator_aos_batch, step);
     oscillator::BatchResults result_aos = oscillator::aos_batch_report(oscillator_aos_batch);

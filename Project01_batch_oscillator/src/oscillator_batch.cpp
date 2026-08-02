@@ -11,7 +11,7 @@
 
 namespace oscillator {
 
-OscillatorBatch make_oscillator_aos_batch(int number, double dt, int seed) {
+OscillatorAoSBatch make_oscillator_aos_batch(int number, double dt, int seed) {
     if (number < 0) {
         throw std::invalid_argument("oscillator number must be non-negative");
     }
@@ -21,7 +21,7 @@ OscillatorBatch make_oscillator_aos_batch(int number, double dt, int seed) {
     std::uniform_real_distribution<double> velocity_uniform(-1, 1);
     std::uniform_real_distribution<double> omega_uniform(0.5, 5);
     std::uniform_real_distribution<double> zeta_uniform(0.0, 0.9);
-    OscillatorBatch aos_batch(number);
+    OscillatorAoSBatch aos_batch(number);
     for (int i = 0; i < number; ++i) {
         double omega = omega_uniform(gen);
         double zeta = zeta_uniform(gen);
@@ -42,7 +42,7 @@ OscillatorBatch make_oscillator_aos_batch(int number, double dt, int seed) {
     return aos_batch;
 }
 
-void update_aos_batch_step(OscillatorBatch& aos_batch) {
+void update_aos_batch_step(OscillatorAoSBatch& aos_batch) {
     for (auto& oscillator : aos_batch) {
         // 避免 velocity 错误地使用已经更新的 position。
         double position =
@@ -54,7 +54,7 @@ void update_aos_batch_step(OscillatorBatch& aos_batch) {
     }
 }
 
-void update_aos_batch(OscillatorBatch& aos_batch, int step) {
+void update_aos_batch(OscillatorAoSBatch& aos_batch, int step) {
     if (step < 0) {
         throw std::invalid_argument("step must be non-negative");
     }
@@ -64,7 +64,7 @@ void update_aos_batch(OscillatorBatch& aos_batch, int step) {
     };
 }
 
-BatchResults aos_batch_report(OscillatorBatch& aos_batch_updated) {
+BatchResults aos_batch_report(OscillatorAoSBatch& aos_batch_updated) {
     std::size_t N = aos_batch_updated.size();
     double state_checksum = 0.0;
     double max_abs_x = 0.0;

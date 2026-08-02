@@ -9,33 +9,49 @@ BENCHMARK_DIR = SCRIPT_DIR.parent
 
 # 只从人工确认并冻结的 baseline CSV 绘图；benchmark 可执行文件的日常输出使用
 # aos_benchmark.csv，避免一次试跑直接覆盖已提交的基线数据。
-csv_path = BENCHMARK_DIR / "results" / "aos_benchmark.csv"
+csv_path_aos = BENCHMARK_DIR / "results" / "aos_benchmark.csv"
+csv_path_soa = BENCHMARK_DIR / "results" / "soa_benchmark.csv"
 # PNG 先写为工作文件；目视确认后再与 CSV 一起另存为 *_baseline.png。
-figure_path = BENCHMARK_DIR / "figures" / "aos_benchmark.png"
+figure_path = BENCHMARK_DIR / "figures" / "aosvsoa_benchmark.png"
 
 figure_path.parent.mkdir(parents=True, exist_ok=True)
 
-data = pd.read_csv(csv_path)
+data_aos = pd.read_csv(csv_path_aos)
+data_soa = pd.read_csv(csv_path_soa)
 
 plt.figure()
 plt.plot(
-    data["N"],
-    data["average_ns"],
+    data_aos["N"],
+    data_aos["average_ns"],
     marker="o",
-    label="Average",
+    label="Average(AoS)",
 )
 
 plt.plot(
-    data["N"],
-    data["median_ns"],
+    data_aos["N"],
+    data_aos["median_ns"],
     marker="o",
-    label="Median"
+    label="Median(AoS)"
+)
+
+plt.plot(
+    data_soa["N"],
+    data_soa["average_ns"],
+    marker="o",
+    label="Average(SoA)"
+)
+
+plt.plot(
+    data_soa["N"],
+    data_soa["median_ns"],
+    marker="o",
+    label="Median(SoA)" 
 )
 
 plt.xscale("log", base=2)
 plt.xlabel("Oscillator count N")
 plt.ylabel("Time per oscillator step (ns)")
-plt.title("AoS batch performance")
+plt.title("AoS V SoA batch performance")
 plt.grid(True)
 plt.legend(loc = "upper left")
 

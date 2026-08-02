@@ -70,7 +70,7 @@ void test_batch_number() {
     const double dt = 0.1;
     const int number = 10;
     const int seed = 12345;
-    OscillatorBatch oscillator_aos_batch = make_oscillator_aos_batch(number, dt, seed);
+    OscillatorAoSBatch oscillator_aos_batch = make_oscillator_aos_batch(number, dt, seed);
     OscillatorSoABatch oscillator_soa_batch = make_oscillator_soa_batch(number, dt, seed);
     const std::size_t i = number;
 
@@ -87,7 +87,7 @@ void test_zero_batch_and_update() {
     const int step1 = 0;
     const int step2 = 10;
     const int seed = 12345;
-    OscillatorBatch oscillator_aos_batch = make_oscillator_aos_batch(number, dt, seed);
+    OscillatorAoSBatch oscillator_aos_batch = make_oscillator_aos_batch(number, dt, seed);
     OscillatorSoABatch oscillator_soa_batch = make_oscillator_soa_batch(number, dt, seed);
     update_aos_batch(oscillator_aos_batch, step1);
     update_aos_batch(oscillator_aos_batch, step2);
@@ -112,12 +112,12 @@ void test_batch() {
     const double time1 = dt * step1;
     const double time2 = dt * (step1 + step2);
 
-    OscillatorBatch oscillator_aos_batch = make_oscillator_aos_batch(number, dt, seed);
-    OscillatorBatch oscillator_aos_batch1 = make_oscillator_aos_batch(number1, dt, seed);
+    OscillatorAoSBatch oscillator_aos_batch = make_oscillator_aos_batch(number, dt, seed);
+    OscillatorAoSBatch oscillator_aos_batch1 = make_oscillator_aos_batch(number1, dt, seed);
     OscillatorSoABatch oscillator_soa_batch = make_oscillator_soa_batch(number, dt, seed);
     OscillatorSoABatch oscillator_soa_batch1 = make_oscillator_soa_batch(number1, dt, seed);
-    OscillatorBatch initial_oscillator_aos_batch = oscillator_aos_batch;
-    OscillatorBatch initial_oscillator_aos_batch1 = oscillator_aos_batch1;
+    OscillatorAoSBatch initial_oscillator_aos_batch = oscillator_aos_batch;
+    OscillatorAoSBatch initial_oscillator_aos_batch1 = oscillator_aos_batch1;
     OscillatorSoABatch initial_oscillator_soa_batch = oscillator_soa_batch;
     OscillatorSoABatch initial_oscillator_soa_batch1 = oscillator_soa_batch1;
 

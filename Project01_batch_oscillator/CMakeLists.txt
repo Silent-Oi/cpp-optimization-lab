@@ -44,7 +44,7 @@ target_link_libraries(oscillator_batch
 
 # AoS benchmark 独立于功能示例和测试，避免输出与计时代码进入 oscillator_core。
 add_executable(oscillator_aos_benchmark
-    "benchmarks/aos_batch_benchmark.cpp"
+    "benchmarks/batch_benchmark.cpp"
 )
 
 target_link_libraries(oscillator_aos_benchmark
