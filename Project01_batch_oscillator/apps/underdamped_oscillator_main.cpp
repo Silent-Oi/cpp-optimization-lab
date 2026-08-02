@@ -7,7 +7,7 @@ int main() {
     // 实验参数
     const double omega = 1.0 * std::numbers::pi;
     const double zeta = 0.8;
-    const int step = 13;
+    const int step = 130000;
     const double dt = 0.013;
     const double time = step * dt;
 

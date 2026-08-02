@@ -1,12 +1,12 @@
+#include <algorithm>
+#include <array>
 #include <chrono>
 #include <cstdint>
 #include <iomanip>
 #include <iostream>
 #include <stdexcept>
 #include <vector>
-#include <array>
-#include <algorithm>
-
+#include <cmath>
 #include "oscillator_batch.h"
 #include "state.h"
 
@@ -25,22 +25,23 @@ struct BenchResults {
 }  // namespace benchmark
 
 int main() {
+
     // 初始化参数
-    const int cycle = 7;
-    constexpr int number = 1'000'000;
-    std::vector<int> numbers = {256, 512, 768, 1'000, 10'000, 100'000, 1'000'000};
-    std::vector<int> steps = {1'000, 1'000, 1'000, 1'000, 1'000, 1'000, 1'000};
-    if (numbers.size() != steps.size())
-    {
+    constexpr double eps = 1e-9;
+
+    const int cycle = 8;
+    // std::vector<int> numbers = {256, 512, 768, 1'000, 10'000, 100'000, 1'000'000};
+    std::vector<int> numbers = {256, 256, 256, 256};
+    std::vector<int> steps = {100, 1'000, 10'000, 100'000};
+    if (numbers.size() != steps.size()) {
         throw std::invalid_argument("振子数量维度和计算布维度不一致");
     }
     const int numbers_count = static_cast<int>(numbers.size());
-    constexpr int step = 1'000;
     constexpr int seed = 1234;
     constexpr double dt = 0.123;
 
     const int all_cycle = cycle * numbers_count;
-    
+
     // 计时batch更新
     std::vector<benchmark::BenchResults> all_bench_results(all_cycle);
     for (int j = 0; j < numbers_count; ++j) {
@@ -64,6 +65,7 @@ int main() {
             if (!current_batch_result.finite) {
                 throw std::runtime_error("振子更新结果异常");
             }
+
             std::uint64_t counts = static_cast<std::uint64_t>(current_batch_result.N) *
                                    static_cast<std::uint64_t>(steps[j]);
 
@@ -106,7 +108,7 @@ int main() {
             double run_time_second = all_bench_results[current_index].run_time_second;
 
             samples[i] = run_time_second;
-            
+
             std::cout << std::setprecision(10)
                       << "current_cycle: " << all_bench_results[current_index].current_cycle
                       << '\n';
@@ -116,10 +118,9 @@ int main() {
             std::cout << std::setprecision(10) << "update_nanosecond_per_oscillator_step: "
                       << all_bench_results[current_index].update_nanosecond_per_oscillator_step
                       << '\n';
- 
+                      
             std::cout << std::setprecision(10) << "state_checksum: "
-                      << all_bench_results[current_index].aos_batch_results.state_checksum
-                      << '\n';
+                      << all_bench_results[current_index].aos_batch_results.state_checksum << '\n';
             std::cout << std::setprecision(10) << "max_abs_x: "
                       << all_bench_results[current_index].aos_batch_results.max_abs_x << '\n';
             std::cout << std::setprecision(10) << "max_abs_v: "

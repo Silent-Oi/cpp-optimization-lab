@@ -17,5 +17,4 @@ int main() {
     oscillator::test_batch_number();
     oscillator::test_zero_batch_and_update();
     oscillator::test_batch_aos();
-
 }

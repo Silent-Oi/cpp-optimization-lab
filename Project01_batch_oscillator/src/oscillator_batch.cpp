@@ -1,10 +1,11 @@
 #include "oscillator_batch.h"
 
+
 #include <cmath>
+#include <cstdlib>
 #include <random>
 #include <stdexcept>
 #include <vector>
-#include <cstdlib>
 
 #include "state.h"
 #include "underdamped_oscillator.h"
@@ -41,7 +42,6 @@ OscillatorBatch make_OscillatorAoS_batch(int number, double dt, int seed) {
     }
     return aos_batch;
 }
-
 
 void update_aos_batch_step(OscillatorBatch& aos_batch) {
     for (auto& oscillator : aos_batch) {

@@ -9,6 +9,10 @@ learning_logs/
 ├─ M1/
 │  ├─ learning_log.md
 │  └─ assets/
+├─ M2/
+│  └─ learning_log.md
+└─ M3/
+   └─ learning_log.md
 ```
 
 - 每个里程碑使用独立的 `Mx/learning_log.md`。
