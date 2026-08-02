@@ -57,3 +57,5 @@ Project*/results/*
 *.tmp
 *.log
 *.bak
+/Project01_batch_oscillator/benchmarks/results/aos_benchmark.csv
+/Project01_batch_oscillator/benchmarks/results/soa_benchmark.csv
