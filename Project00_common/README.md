@@ -1,14 +1,75 @@
 # Project00 — Common
 
-`Project00_common` 不是学习项目，也没有独立进度。
+> Shared C++ components used across the optimization projects.
 
-它只存放已经在至少两个子项目中出现、确实值得复用的基础组件。不要因为“以后可能有用”提前建设工具库、数学库、线程池或 benchmark 框架。
+`Project00_common` 是 **C++ Optimization Lab** 的公共基础层，用于存放多个子项目真正需要复用的轻量组件。
 
-当前原则：
+## 作用
 
-- 当前项目能在自己的目录中简单完成，就先留在当前项目。
-- 第二个项目出现相同需求后，再考虑移动到 Common。
-- 移入 Common 的组件必须已经有清楚接口和真实使用者。
-- Common 不产生自己的 checklist。
+随着项目推进，可能进入 Common 的内容包括：
 
-当前的 `cpp_lab_common` target 可以保留作为构建入口；没有真实公共组件时无需继续施工。
+- 基础数学类型
+- 计时工具
+- 对齐存储辅助
+- 简单图像或文件输出工具
+- 公共编译配置
+- 小型测试辅助函数
+
+项目专属的数据结构、算法和业务逻辑仍然保留在各自目录中。
+
+## 当前状态
+
+Project00 目前提供一个 CMake `INTERFACE` target：
+
+```cmake
+cpp_lab_common
+```
+
+它负责：
+
+- 暴露公共头文件目录
+- 统一要求 C++20
+- 为后续公共组件提供稳定的依赖入口
+
+当前没有需要编译的公共源文件，也没有独立可执行程序。
+
+当前也没有已经投入使用的公共功能组件：`include/timer.hpp.h` 只有占位内容，
+`src/`、`tests/` 和 `benchmarks/` 仅保留空目录占位，尚未接入 CMake。
+
+## 使用方式
+
+子项目可以通过 CMake 链接公共 target：
+
+```cmake
+target_link_libraries(
+    your_target
+    PRIVATE
+        cpp_lab_common
+)
+```
+
+随后即可使用 `Project00_common/include/` 中的公共头文件。
+
+## 目录结构
+
+```text
+Project00_common/
+├─ include/       # 公共头文件；当前只有占位内容
+├─ src/           # 当前为空，尚未接入 CMake
+├─ tests/         # 当前为空，尚未接入 CMake
+├─ benchmarks/    # 当前为空，尚未接入 CMake
+├─ CMakeLists.txt
+└─ README.md
+```
+
+当未来出现真正共享的实现代码时，再把相应目录接入编译型 library、测试或 benchmark target。
+
+## 设计原则
+
+一个组件进入 Project00 前，应满足：
+
+1. 已经在至少两个子项目中出现真实复用需求；
+2. 接口经过实际使用，职责已经基本明确；
+3. 提取后能够减少重复，而不会隐藏子项目的核心逻辑。
+
+Project00 会保持小而稳定，只承载已经被项目证明有价值的公共能力。

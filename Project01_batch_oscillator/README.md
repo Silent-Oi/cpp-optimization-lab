@@ -1,136 +1,160 @@
 # Project01 — Batch Oscillator
 
-Project01 要做出两个相连的成果：
+> Million-scale damped oscillator simulation, CPU performance analysis, and phase-space visualization.
 
-1. **批量欠阻尼振子计算程序**
-2. **欠阻尼振子相空间星云**
+项目从批量更新大量欠阻尼振子出发，研究数据布局、缓存、向量化和多线程如何影响 CPU 性能，并最终把振子状态绘制成实时相空间星云。
 
-它同时是整个仓库的 **C++ 性能优化入门项目** 和 **图形学入门项目**。
+项目目标：
 
-## 最终作品
+> **高效计算并画出可视化运动状态**
 
-### 批量计算
+## 目标实现
 
-程序能够初始化并连续更新大量参数不同的欠阻尼振子。核心计算使用固定 `dt` 下的精确一步更新，使性能实验聚焦于数据布局、内存访问和 CPU 执行，而不是积分误差。
+Project01 由两个相互连接的部分组成。
 
-通过 AoS baseline、SoA、编译器自动向量化以及有意义时的简单多线程实验，理解同一算法为什么会因为数据组织和执行方式不同而产生性能差异。
+### 批量振子计算
+
+程序能够初始化并连续更新大量参数不同的欠阻尼振子。
+
+性能主线包括：
+
+- 标量参考实现
+- 连续批量存储
+- AoS 与 SoA 数据布局
+- 工作集规模与缓存层级
+- 编译器自动向量化
+- 多线程连续分块
 
 ### 相空间星云
 
-将每个振子的状态映射到二维相空间：
+每个振子被映射到二维相空间：
 
 ```text
 horizontal = position
 vertical   = velocity / omega
 ```
 
-大量振子形成旋转、展开并逐渐向原点收缩的星云。这个画面用于直接观察欠阻尼动力学，同时学习像素缓冲、坐标映射、窗口循环、动画和计算层/显示层分离。
+大量振子共同形成旋转、展开并逐渐向原点收缩的星云。
 
-## 物理模型
+可视化部分将引入：
 
-线性黏性阻尼振子：
+- 物理坐标到屏幕坐标的映射
+- CPU 像素缓冲
+- 粒子绘制与拖尾
+- 窗口和事件循环
+- 仿真时间与帧时间
+- 计算层与显示层分离
+
+## 项目设计
+[`docs/design.md`](docs/design.md)
+
+## 性能实验
+
+### 已完成实验
+
+Benchmark 对 AoS 和 SoA 执行相同的批量规模扫描，并记录每个规模的平均值和中位数：
 
 ```text
-x' = v
-v' = -2 * zeta * omega * v - omega^2 * x
+time per oscillator-step (ns)
 ```
 
-核心范围：
+1. AoS 与 SoA 数据布局对性能的影响
+2. 输入数据规模对性能的影响
 
-- `omega > 0`
-- `0 < zeta < 1`
-- `zeta = 0` 用于无阻尼回归
-- 所有振子使用统一 `dt`
-- 不同振子可以拥有不同状态、`omega` 和 `zeta`
+### 计划实验
 
-固定参数和固定 `dt` 下，每一步写成：
+1. Cache blocking 对多步批量更新的缓存局部性和性能影响
+2. 多线程
 
-```text
-x_next = a * x + b * v
-v_next = c * x + d * v
-```
+## 当前进展
 
-四个系数在初始化时计算，热循环只更新状态。
+已经完成：
 
-## 技术路线
+- 谐振子数值方法实验
+- 欠阻尼解析参考
+- 固定时间步的精确一步更新
+- 单步、多步和无阻尼回归测试
+- 可复现的批量初始化
+- AoS 批量实现
+- SoA 批量实现
+- AoS、SoA 与解析参考的一致性测试
+- AoS 与 SoA benchmark
+- CSV 输出与绘图流程
+- 部分性能实验
 
+后续内容：
 
-### 1. 单振子与正确性基线
+- 计划性能实验
+- 编译器自动向量化分析
+- 多线程批量更新与扩展性测试
+- 相空间坐标映射
+- CPU 像素缓冲
+- 实时相空间星云
 
-- 无阻尼解析解与积分器学习
-- 欠阻尼解析状态
-- 固定 `dt` 的精确一步系数
-- 单步、多步和零阻尼回归测试
+## 技术地图
 
-### 2. AoS 批量 baseline 
+| 技术 | 需要实现的东西 | 目的 |
+|---|---|---|
+| 解析参考 | 任意时刻的单振子状态 | 建立正确性基准 |
+| 精确一步更新 | 预计算 2×2 更新系数 | 从热循环中移除积分误差和昂贵函数 |
+| 连续存储 | `std::vector` 批量容器 | 高效处理大量数据 |
+| AoS | 每个振子一个结构体 | 建立直观 baseline |
+| Benchmark | 数据规模与单次更新时间曲线 | 观察缓存和内存阶段 |
+| SoA | 每个字段一个连续数组 | 改善数据流局部性和 SIMD 条件 |
+| 自动向量化 | 编译器报告与核心循环分析 | 理解单核数据并行 |
+| 多线程 | 连续区间分块更新 | 使用多个 CPU 核心 |
+| 相空间映射 | `(x, v / omega)` 到屏幕坐标 | 把状态转成可见几何 |
+| 像素缓冲 | CPU 生成 RGBA 图像 | 产生画面 |
+| 窗口循环 | 更新、绘制、显示 | 将仿真变成实时动画 |
 
-- `std::vector<OscillatorAoS>` 连续存储
-- 可复现初始化
-- 单线程批量更新
-- 与标量参考一致
-- 大规模结果 checksum
-
-### 3. AoS benchmark
-
-- 合理控制不同规模的运行量
-- 预热和重复测量
-- 输出吞吐量与每次更新时间
-- 观察性能随工作集规模的变化
-
-
-### 4. SoA 与编译器优化
-
-- 只改变数据布局，不改变输入和算法
-- 比较 AoS 与 SoA
-- 检查编译器自动向量化
-- 根据结果理解缓存、带宽和 SIMD
-
-### 5. 条件多线程
-
-只有单线程版本稳定、规模足够且并行确实有学习价值时，加入最简单的连续分块并行。线程池和复杂调度不属于本项目。
-
-### 6. 相空间星云
-
-- 建立独立 visualizer target
-- 使用 CPU RGBA 像素缓冲
-- 映射 `position` 与 `velocity / omega`
-- 实现固定坐标范围、粒子绘制和短拖尾
-- 加入最小窗口事件循环和暂停/重置
-- 保持绘制代码与 `oscillator_core` 分离
-
-具体实现路线见 [`docs/visualization_plan.md`](docs/visualization_plan.md)。
-
-## 完成标准
-
-Project01 完成时应当：
-
-- 能批量计算大量欠阻尼振子的运动状态。
-- 能把计算状态实时画成欠阻尼振子相空间星云。
-
-
-## 代码结构
+## 项目结构
 
 ```text
 Project01_batch_oscillator/
-├─ include/       # 模型与批量接口
-├─ src/           # 核心实现
-├─ apps/          # 功能入口
-├─ tests/         # 必要正确性检查
-├─ benchmarks/    # 性能测量入口
-├─ docs/
-│  ├─ design.md
-│  ├─ visualization_plan.md
-│  └─ learning_logs/   # 自愿学习记录
-└─ CMakeLists.txt
+├─ include/       # 模型与公共批量接口
+├─ src/           # 核心振子实现
+├─ apps/          # 功能示例入口
+├─ tests/         # 正确性与回归测试
+├─ benchmarks/    # benchmark相关文件
+├─ docs/          # 项目相关文档
+├─ visualizer/    # 可视化
+├─ CMakeLists.txt
+└─ README.md
 ```
 
-主要 target：
+## 主要 Targets
 
 ```text
 oscillator_core
+harmonic_oscillator
+underdamped_oscillator
 oscillator_batch
-oscillator_aos_benchmark
+oscillator_benchmark
 oscillator_tests
 ```
 
-visualizer 实施时再加入独立 target，不提前建设图形框架。
+`oscillator_benchmark` 会依次运行 AoS 和 SoA benchmark。
+
+可视化程序会使用独立 target，避免窗口、绘制和帧率逻辑进入核心计算库或 benchmark 计时区间。
+
+## 构建
+
+从仓库根目录执行：
+
+```bash
+cmake -S . -B build
+cmake --build build --config Release
+```
+
+单独构建测试和 benchmark：
+
+```bash
+cmake --build build --config Release --target oscillator_tests oscillator_benchmark
+```
+
+当前主要开发环境：
+
+- C++20
+- CMake 3.20+
+- Visual Studio / MSVC x64
+- Windows 10 / 11

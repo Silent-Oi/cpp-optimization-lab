@@ -1,69 +1,88 @@
 # C++ Optimization Lab
 
-这是一个通过连续子项目学习 **C++ 性能优化、数值计算与 CPU 图形学** 的长期仓库。
+> A progressive C++ performance optimization lab for numerical computing and CPU graphics.
 
-仓库不是文档工程，也不以 checklist、实验报告数量或代码规模衡量进度。每个子项目都要做出一个真正能运行的程序，并让新知识自然地服务于后续目标。
+这是一个以实际程序为载体，逐步学习 **现代 C++、数值计算、CPU 性能优化与基础图形学** 的长期项目。
 
-## 两个确定目标
+## 项目目标
 
-### 中期目标：稀疏矩阵与高性能数值求解器
+### 中期目标：稀疏矩阵与高性能数值求解
 
-完成稀疏矩阵存储、SpMV、共轭梯度法、简单预条件和二维 Poisson 方程求解，把数值算法、数据结构、内存访问与性能分析连接起来。
+实现并理解：
+
+- CSR 稀疏矩阵存储
+- Sparse Matrix-Vector Multiplication（SpMV）
+- Conjugate Gradient（CG）
+- 简单预条件
+- Matrix-free operator
+- 二维 Poisson 方程求解
+
+这一阶段将数值算法、数据结构、内存访问与 CPU 性能分析连接起来。
 
 ### 最终目标：高性能 CPU 路径追踪器
 
-完成三角形网格、材质与随机采样、BVH、并行渲染和系统级性能优化，把数学、物理、现代 C++、空间数据结构与 CPU 优化能力汇合到一个完整作品中。
+完成一个包含以下能力的 CPU 路径追踪器：
 
-## 总项目文档的职责
+- 三角形网格与材质系统
+- 光线与几何求交
+- Monte Carlo 随机采样
+- BVH 空间加速结构
+- 多线程并行渲染
+- 缓存、数据布局与热点循环优化
 
-总项目文档只负责：
+这个项目将综合使用数学、物理、现代 C++、空间数据结构与 CPU 性能优化。
 
-1. 记住两个确定目标，防止学习路线跑偏。
-2. 说明各子项目之间的技术递进关系。
-3. 根据已经掌握的能力调整后续子项目，使难度平滑、连续、可执行。
+## 当前项目
 
-总项目不要求每个子项目机械地产出实验报告、流程图、总结或固定格式的学习记录。测试、benchmark 和设计记录只有在帮助写代码、判断正确性或理解性能时才需要。
+### [Project01 — Batch Oscillator](Project01_batch_oscillator/README.md)
 
-## 工作方式
+批量计算大量参数不同的欠阻尼振子，并将它们的状态绘制成相空间星云。
 
-每个子项目遵循一条自然主线：
-
-```text
-做出正确版本 -> 跑起来 -> 发现问题 -> 学习需要的知识
--> 修改代码 -> 比较结果 -> 做出最终作品
-```
-
-基本原则：
-
-- **代码优先**：打开仓库后应能立刻知道下一段代码写什么。
-- **项目驱动学习**：只在当前实现需要时引入新的 C++、数值或图形学知识。
-- **验证服务于实现**：测试用于防止写错，benchmark 用于判断优化是否有效。
-- **文档不是债务**：只记录长期路线、关键设计和当前任务，不为记录而记录。
-- **路线允许调整**：Project01 已经确定；后续项目在临近开始时根据实际能力细化。
-
-## 当前路线
-
-粗粒度技术路线见 [`docs/roadmap.md`](docs/roadmap.md)。
-
-当前正在进行：
-
-- [`Project01_batch_oscillator`](Project01_batch_oscillator/README.md)：批量欠阻尼振子计算、C++ 性能优化入门与相空间星云可视化。
+## 技术路线
+### [Roadmap](docs/roadmap.md) ###
 
 ## 仓库结构
 
 ```text
 cpp-optimization-lab/
-├─ Project00_common/             # 出现真实复用需求后再加入公共组件
-├─ Project01_batch_oscillator/   # 当前项目
-├─ docs/roadmap.md               # 通往两个确定目标的技术路线
-├─ AGENTS.md                     # Codex 的协作与教学规则
+├─ Project00_common/             # 公共组件入口
+├─ Project01_batch_oscillator/   # 欠阻尼振子
+├─ docs/
+│  └─ roadmap.md                 # 总体技术路线
 ├─ CMakeLists.txt
 └─ CMakeSettings.json
 ```
 
-## 环境
+每个子项目通常包含：
+
+```text
+ProjectXX/
+├─ include/       # 公共接口
+├─ src/           # 核心实现
+├─ apps/          # 可执行程序
+├─ tests/         # 正确性测试
+├─ benchmarks/    # 性能测试
+├─ docs/          # 项目相关文档
+├─ visualizer/    # 可视化
+└─ CMakeLists.txt
+```
+
+## 构建
+
+项目使用 C++20 和 CMake。
+
+```bash
+cmake -S . -B build
+cmake --build build --config Release
+```
+
+当前主要开发环境：
 
 - C++20
 - CMake 3.20+
 - Visual Studio / MSVC x64
 - Windows 10 / 11
+
+## 项目状态
+
+项目仍在持续开发中。实现、接口与目录结构会随着技术路线推进而演化。
