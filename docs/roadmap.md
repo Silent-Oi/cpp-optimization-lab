@@ -20,7 +20,7 @@
 ### Project01 — 批量欠阻尼振子
 
 学习大量独立状态的连续更新：数据怎么放、CPU 怎么读、编译器能否向量化。以及数据怎么画出来。
-[Project01 — roadmap.md](Project01_batch_oscillator/docs/roadmap.md)
+[Project01 — roadmap.md](../Project01_batch_oscillator/docs/roadmap.md)
 
 
 ### Project02 — 二维热方程
