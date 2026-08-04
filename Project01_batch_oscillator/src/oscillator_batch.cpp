@@ -1,5 +1,5 @@
 #include "oscillator_batch.h"
-
+#include <numbers>
 #include <cmath>
 #include <cstdlib>
 #include <random>
@@ -17,20 +17,22 @@ OscillatorAoSBatch make_oscillator_aos_batch(int number, double dt, int seed) {
     }
     // 固定 seed；每个振子拥有独立状态和参数。
     std::mt19937 gen(seed);
-    std::uniform_real_distribution<double> position_uniform(-1, 1);
-    std::uniform_real_distribution<double> velocity_uniform(-1, 1);
+    std::uniform_real_distribution<double> norm_uniform(0, 1);
     std::uniform_real_distribution<double> omega_uniform(0.5, 5);
     std::uniform_real_distribution<double> zeta_uniform(0.0, 0.9);
     OscillatorAoSBatch aos_batch(number);
     for (int i = 0; i < number; ++i) {
         double omega = omega_uniform(gen);
         double zeta = zeta_uniform(gen);
+
+        double theta = norm_uniform(gen) * 2 * std::numbers::pi;
+        double r = sqrt(norm_uniform(gen));
         UnderdampedOscillator system(omega, zeta);
         // 演化系数只在初始化阶段计算一次。
         StepCoefficients step_coefficients = system.make_step_coefficients(dt);
 
-        OscillatorAoS oscillator{.position = position_uniform(gen),
-                                 .velocity = velocity_uniform(gen),
+        OscillatorAoS oscillator{.position = r * cos(theta),
+                                 .velocity = r * sin(theta),
                                  .omega = omega,
                                  .zeta = zeta,
                                  .m00 = step_coefficients.m00,
@@ -99,8 +101,7 @@ OscillatorSoABatch make_oscillator_soa_batch(int number, double dt, int seed) {
     }
     const std::size_t count = static_cast<std::size_t>(number);
     std::mt19937 gen(seed);
-    std::uniform_real_distribution<double> position_uniform(-1, 1);
-    std::uniform_real_distribution<double> velocity_uniform(-1, 1);
+    std::uniform_real_distribution<double> norm_uniform(0, 1);
     std::uniform_real_distribution<double> omega_uniform(0.5, 5);
     std::uniform_real_distribution<double> zeta_uniform(0.0, 0.9);
 
@@ -118,8 +119,11 @@ OscillatorSoABatch make_oscillator_soa_batch(int number, double dt, int seed) {
     for (int i = 0; i < number; ++i) {
         soa_batch.omega[i] = omega_uniform(gen);
         soa_batch.zeta[i] = zeta_uniform(gen);
-        soa_batch.position[i] = position_uniform(gen);
-        soa_batch.velocity[i] = velocity_uniform(gen);
+
+        double theta = norm_uniform(gen) * 2 * std::numbers::pi;
+        double r = sqrt(norm_uniform(gen));
+        soa_batch.position[i] = r * cos(theta);
+        soa_batch.velocity[i] = r * sin(theta);
 
         UnderdampedOscillator system(soa_batch.omega[i], soa_batch.zeta[i]);
         StepCoefficients step_coefficients = system.make_step_coefficients(dt);
