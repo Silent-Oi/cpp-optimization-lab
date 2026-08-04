@@ -6,7 +6,7 @@
 
 namespace oscillator {
 
-// vector 保证元素连续存储，作为后续数据布局实验的 AoS baseline。
+// vector 保证元素连续存储。
 using OscillatorAoSBatch = std::vector<OscillatorAoS>;
 
 // 使用固定 seed 初始化 number 个相互独立的振子，并为固定 dt 预计算各自的更新系数。
@@ -22,6 +22,8 @@ void update_aos_batch(OscillatorAoSBatch& aos_batch, int step);
 BatchResults aos_batch_report(OscillatorAoSBatch& aos_batch_updated);
 
 OscillatorSoABatch make_oscillator_soa_batch(int number, double dt, int seed);
+OscillatorSoABatch make_oscillator_soa_batch(int number, double dt, int seed, double omega,
+                                             double zeta);
 
 void update_soa_batch_step(OscillatorSoABatch& soa_batch);
 

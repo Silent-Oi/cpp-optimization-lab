@@ -10,7 +10,7 @@ struct Rgba8 {
     std::uint8_t a;
 };
 
-struct Corrdnate {
+struct Coordnate {
     int x;
     int y;
 };
@@ -23,6 +23,8 @@ class PixelBuffer {
     int width() const;
     int height() const;
     const std::vector<std::uint8_t>& bytes() const;
+
+    std::uint8_t* data();
 
     bool set_pixel(int x, int y, Rgba8 color);
     void clear();

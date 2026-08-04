@@ -135,6 +135,47 @@ OscillatorSoABatch make_oscillator_soa_batch(int number, double dt, int seed) {
 
     return soa_batch;
 }
+
+OscillatorSoABatch make_oscillator_soa_batch(int number, double dt, int seed, double omega, double zeta) {
+    if (number < 0) {
+        throw std::invalid_argument("oscillator number must be non-negative");
+    }
+    const std::size_t count = static_cast<std::size_t>(number);
+    std::mt19937 gen(seed);
+    std::uniform_real_distribution<double> norm_uniform(0, 1);
+
+    OscillatorSoABatch soa_batch = {
+        .position = std::vector<double>(count),
+        .velocity = std::vector<double>(count),
+        .m00 = std::vector<double>(count),
+        .m01 = std::vector<double>(count),
+        .m10 = std::vector<double>(count),
+        .m11 = std::vector<double>(count),
+        .omega = std::vector<double>(count),
+        .zeta = std::vector<double>(count),
+    };
+
+    for (int i = 0; i < number; ++i) {
+        soa_batch.omega[i] = omega;
+        soa_batch.zeta[i] = zeta;
+
+        double theta = norm_uniform(gen) * 2 * std::numbers::pi;
+        double r = sqrt(norm_uniform(gen));
+        soa_batch.position[i] = r * cos(theta);
+        soa_batch.velocity[i] = r * sin(theta);
+
+        UnderdampedOscillator system(soa_batch.omega[i], soa_batch.zeta[i]);
+        StepCoefficients step_coefficients = system.make_step_coefficients(dt);
+        soa_batch.m00[i] = step_coefficients.m00;
+        soa_batch.m01[i] = step_coefficients.m01;
+        soa_batch.m10[i] = step_coefficients.m10;
+        soa_batch.m11[i] = step_coefficients.m11;
+    }
+
+    return soa_batch;
+}
+
+
 void update_soa_batch_step(OscillatorSoABatch& soa_batch) {
     const std::size_t N = soa_batch.omega.size();
     for (std::size_t i = 0; i < N; ++i) {

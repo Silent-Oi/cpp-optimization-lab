@@ -86,6 +86,7 @@ add_executable(oscillator_visualizer
 target_include_directories(oscillator_visualizer
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/visualizer
+        ${CMAKE_SOURCE_DIR}/third_party/RGFW
 )
 
 target_link_libraries(oscillator_visualizer

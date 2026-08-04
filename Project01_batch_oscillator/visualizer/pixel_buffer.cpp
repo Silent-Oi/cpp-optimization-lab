@@ -25,9 +25,15 @@ int PixelBuffer::height() const {
     return height_;
 }
 
-const std::vector<std::uint8_t>& PixelBuffer::bytes() const {
+const std::vector<std::uint8_t>& PixelBuffer::bytes() const{
     return bytes_;
 }
+
+std::uint8_t* PixelBuffer::data() {
+    return bytes_.data();
+
+}
+
 
 bool PixelBuffer::set_pixel(int x, int y, Rgba8 color) {
     if (x < 0 || y < 0 || x >= width_ || y >= height_) {
