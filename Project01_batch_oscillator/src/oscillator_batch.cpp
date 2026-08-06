@@ -1,7 +1,8 @@
 #include "oscillator_batch.h"
-#include <numbers>
+
 #include <cmath>
 #include <cstdlib>
+#include <numbers>
 #include <random>
 #include <stdexcept>
 #include <vector>
@@ -136,7 +137,8 @@ OscillatorSoABatch make_oscillator_soa_batch(int number, double dt, int seed) {
     return soa_batch;
 }
 
-OscillatorSoABatch make_oscillator_soa_batch(int number, double dt, int seed, double omega, double zeta) {
+OscillatorSoABatch make_oscillator_soa_batch(int number, double dt, int seed, double omega,
+                                             double zeta) {
     if (number < 0) {
         throw std::invalid_argument("oscillator number must be non-negative");
     }
@@ -155,6 +157,9 @@ OscillatorSoABatch make_oscillator_soa_batch(int number, double dt, int seed, do
         .zeta = std::vector<double>(count),
     };
 
+    UnderdampedOscillator system(omega, zeta);
+    StepCoefficients step_coefficients = system.make_step_coefficients(dt);
+
     for (int i = 0; i < number; ++i) {
         soa_batch.omega[i] = omega;
         soa_batch.zeta[i] = zeta;
@@ -164,8 +169,6 @@ OscillatorSoABatch make_oscillator_soa_batch(int number, double dt, int seed, do
         soa_batch.position[i] = r * cos(theta);
         soa_batch.velocity[i] = r * sin(theta);
 
-        UnderdampedOscillator system(soa_batch.omega[i], soa_batch.zeta[i]);
-        StepCoefficients step_coefficients = system.make_step_coefficients(dt);
         soa_batch.m00[i] = step_coefficients.m00;
         soa_batch.m01[i] = step_coefficients.m01;
         soa_batch.m10[i] = step_coefficients.m10;
@@ -174,7 +177,6 @@ OscillatorSoABatch make_oscillator_soa_batch(int number, double dt, int seed, do
 
     return soa_batch;
 }
-
 
 void update_soa_batch_step(OscillatorSoABatch& soa_batch) {
     const std::size_t N = soa_batch.omega.size();

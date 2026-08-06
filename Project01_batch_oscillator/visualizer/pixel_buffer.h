@@ -10,11 +10,17 @@ struct Rgba8 {
     std::uint8_t a;
 };
 
-struct Coordnate {
+struct Coordinate {
     int x;
     int y;
 };
 
+struct PixelAccumulator {
+    std::uint32_t sum_r{};
+    std::uint32_t sum_g{};
+    std::uint32_t sum_b{};
+    std::uint32_t count{};
+};
 
 class PixelBuffer {
    public:

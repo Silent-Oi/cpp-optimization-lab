@@ -81,7 +81,7 @@ target_link_libraries(oscillator_tests
 
 add_executable(oscillator_visualizer
     visualizer/main.cpp
- "visualizer/pixel_buffer.h" "visualizer/pixel_buffer.cpp")
+ "visualizer/pixel_buffer.h" "visualizer/pixel_buffer.cpp" "visualizer/rgfw_impl.cpp")
 
 target_include_directories(oscillator_visualizer
     PRIVATE
