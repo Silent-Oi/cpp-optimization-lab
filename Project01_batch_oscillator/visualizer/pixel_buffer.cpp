@@ -34,6 +34,10 @@ const std::vector<std::uint8_t>& PixelBuffer::bytes() const {
     return bytes_;
 }
 
+std::vector<std::uint8_t>& PixelBuffer::bytes() {
+    return bytes_;
+}
+
 std::uint8_t* PixelBuffer::data() {
     return bytes_.data();
 }

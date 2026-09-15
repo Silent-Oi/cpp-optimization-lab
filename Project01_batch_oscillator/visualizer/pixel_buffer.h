@@ -24,6 +24,7 @@ struct Coordinate {
     int y;
 };
 
+
 class PixelBuffer {
    public:
     PixelBuffer(int width, int height);
@@ -32,6 +33,7 @@ class PixelBuffer {
     int height() const;
     std::size_t pixel_count() const;
     const std::vector<std::uint8_t>& bytes() const;
+    std::vector<std::uint8_t>& bytes();
 
     std::uint8_t* data();
 

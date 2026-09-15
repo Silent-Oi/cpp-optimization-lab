@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 #include <vector>
 
 #include "pixel_buffer.h"
@@ -67,7 +68,7 @@ std::vector<Rgba8> make_oscillator_colors(const oscillator::OscillatorSoABatch& 
 PhaseSpaceRenderer::PhaseSpaceRenderer(const oscillator::OscillatorSoABatch& oscillators,
                                        PixelBuffer& buffer, const Rgba8& low_color,
                                        const Rgba8& mid_color, const Rgba8& high_color)
-    : accumulators_(buffer.pixel_count()) {
+    : accumulators_(buffer.pixel_count()), remainint_life_(buffer.pixel_count()) {
     oscillator_colors_ =
         make_oscillator_colors(oscillators, buffer, low_color, mid_color, high_color);
 }
@@ -119,6 +120,89 @@ void PhaseSpaceRenderer::render(const oscillator::OscillatorSoABatch& oscillator
         Rgba8 color = {channel(accumulators_[pixel].sum_r), channel(accumulators_[pixel].sum_g),
                        channel(accumulators_[pixel].sum_b), 255};
         buffer.set_pixel(pixel, color);
+    }
+}
+
+void fade_pixel_color(const std::size_t& pixel, PixelBuffer& buffer, const Rgba8& background,
+                      double fade_rate) {
+    const std::size_t byte_index = pixel * 4;
+    buffer.bytes()[byte_index] = static_cast<std::uint8_t>(
+        buffer.bytes()[byte_index] * (1 - fade_rate) + fade_rate * background.r);
+    buffer.bytes()[byte_index + 1] = static_cast<std::uint8_t>(
+        buffer.bytes()[byte_index + 1] * (1 - fade_rate) + fade_rate * background.g);
+    buffer.bytes()[byte_index + 2] = static_cast<std::uint8_t>(
+        buffer.bytes()[byte_index + 2] * (1 - fade_rate) + fade_rate * background.b);
+}
+
+void PhaseSpaceRenderer::render(const oscillator::OscillatorSoABatch& oscillators,
+                                PixelBuffer& buffer, const double reference_count,
+                                const int generations) {
+    // 只清除上一帧命中的像素和累加结果。
+    const double fade_factor = 1.0 / generations;
+
+    for (std::size_t i = 0; i < active_pixels_.size();) {
+        const std::size_t pixel = active_pixels_[i];
+
+        remainint_life_[pixel] += 1;
+        if (remainint_life_[pixel] >= generations) {
+            buffer.set_pixel(pixel, black);
+            active_pixels_[i] = std::move(active_pixels_.back());
+            active_pixels_.pop_back();
+            remainint_life_[pixel] = 0;
+            continue;
+        }
+        double fade_rate = fade_factor * remainint_life_[pixel];
+        fade_pixel_color(pixel, buffer, black, fade_rate);
+        ++i;
+    }
+
+    touched_pixels_.clear();
+
+    const std::size_t oscillator_number = oscillators.omega.size();
+    // 先按像素累加颜色和振子数量。
+    for (std::size_t i = 0; i < oscillator_number; ++i) {
+        Coordinate oscillator_coords = visualizer::mapping_phase_to_buffer(
+            oscillators.position[i], oscillators.velocity[i] / oscillators.omega[i], buffer);
+        const int x = oscillator_coords.x;
+        const int y = oscillator_coords.y;
+        if (x < 0 || y < 0 || x >= buffer.width() || y >= buffer.height()) {
+            continue;
+        }
+        std::size_t pixel = static_cast<std::size_t>(buffer.width() * y + x);
+        accumulators_[pixel].sum_r += oscillator_colors_[i].r;
+        accumulators_[pixel].sum_g += oscillator_colors_[i].g;
+        accumulators_[pixel].sum_b += oscillator_colors_[i].b;
+        ++accumulators_[pixel].count;
+        if (accumulators_[pixel].count == 1) {
+            touched_pixels_.push_back(pixel);
+        }
+    }
+
+    // 每个命中像素只混色并写入一次。
+    for (std::size_t pixel : touched_pixels_) {
+        if (pixel >= buffer.pixel_count()) {
+            continue;
+        }
+
+        uint32_t count = accumulators_[pixel].count;
+        const double intensity = std::clamp(
+            std::log1p(static_cast<double>(count)) / std::log1p(reference_count), 0.0, 1.0);
+
+        const auto channel = [&](std::uint32_t sum) -> std::uint8_t {
+            return static_cast<std::uint8_t>((static_cast<double>(sum) / count) * intensity);
+        };
+
+        Rgba8 color = {channel(accumulators_[pixel].sum_r), channel(accumulators_[pixel].sum_g),
+                       channel(accumulators_[pixel].sum_b), 255};
+        buffer.set_pixel(pixel, color);
+
+        if (remainint_life_[pixel] == 0) {
+            active_pixels_.push_back(pixel);
+        } else {
+            remainint_life_[pixel] = 0;
+        }
+
+        accumulators_[pixel] = {};
     }
 }
 

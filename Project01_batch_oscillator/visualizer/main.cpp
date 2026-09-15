@@ -90,14 +90,14 @@ int main() {
         if (RGFW_window_isKeyPressed(window, static_cast<RGFW_key>('r'))) {
             paused = true;
             work_oscillators = initial_oscillators;
-            renderer.render(work_oscillators, buffer, 3);
+            renderer.render(work_oscillators, buffer, 3, 10);
             RGFW_window_blitSurface(window, surface);
         }
 
         if (RGFW_window_isKeyPressed(window, static_cast<RGFW_key>('n'))) {
             paused = true;
             oscillator::update_soa_batch_step(work_oscillators);
-            renderer.render(work_oscillators, buffer, 3);
+            renderer.render(work_oscillators, buffer, 3, 10);
             RGFW_window_blitSurface(window, surface);
         }
 
@@ -111,7 +111,7 @@ int main() {
 
         if (!paused) {
             oscillator::update_soa_batch(work_oscillators, steps);
-            renderer.render(work_oscillators, buffer, 3);
+            renderer.render(work_oscillators, buffer, 3, 10);
             RGFW_window_blitSurface(window, surface);
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(25));
