@@ -26,7 +26,6 @@ OscillatorSoABatch make_oscillator_soa_batch(int number, double dt, int seed, do
                                              double zeta);
 
 void update_soa_batch_step(OscillatorSoABatch& soa_batch);
-
 void update_soa_batch(OscillatorSoABatch& soa_batch, int step);
 
 BatchResults soa_batch_report(OscillatorSoABatch& soa_batch_updated);

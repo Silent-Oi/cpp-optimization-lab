@@ -1,14 +1,17 @@
 # C++ Optimization Lab
 
-> A progressive C++ performance optimization lab for numerical computing and CPU graphics.
+> A project-based C++ lab for numerical computing, CPU/GPU performance, and graphics.
 
-这是一个以实际程序为载体，逐步学习 **现代 C++、数值计算、CPU 性能优化与基础图形学** 的长期项目。
+这是一个以实际程序为载体，逐步学习 **现代 C++、数值计算、CPU/GPU 性能优化与图形学** 的长期项目。
 
-## 项目目标
+## 能力目标
 
-中期目标：稀疏矩阵与高性能数值求解
+本仓库围绕两个方向展开：
 
-最终目标：高性能 CPU 路径追踪器
+- **稀疏矩阵与高性能计算**：数值方法、稀疏数据结构、迭代求解、内存访问与 CPU/GPU 并行计算。
+- **路径追踪与图形渲染**：几何求交、光照与采样、图像生成、空间加速结构与并行渲染。
+
+以稀疏 Poisson 求解器作为中期作品，以高性能 CPU 路径追踪器作为最终整合作品，逐步建立独立实现、解释和扩展程序的能力。
 
 ## 当前项目
 
@@ -16,11 +19,11 @@
 
 批量计算大量参数不同的欠阻尼振子。
 
+下一项目为 [Project02 — CPU/CUDA Heat Equation](Project02_heat_equation/README.md)，目前处于规划阶段。先实现并验证 CPU 热扩散模拟，再引入 CUDA；CUDA 不属于当前 Project01 的构建依赖。
+
 ## 技术路线
 
-### [Roadmap](docs/roadmap.md) ###
-
-## 完成项目
+[查看技术路线](docs/roadmap.md)
 
 ## 仓库结构
 
@@ -28,6 +31,7 @@
 cpp-optimization-lab/
 ├─ Project00_common/             # 公共组件入口
 ├─ Project01_batch_oscillator/   # 欠阻尼振子
+├─ Project02_heat_equation/     # CPU/CUDA 热扩散（规划中）
 ├─ docs/
 │  └─ roadmap.md                 # 总体技术路线
 ├─ CMakeLists.txt

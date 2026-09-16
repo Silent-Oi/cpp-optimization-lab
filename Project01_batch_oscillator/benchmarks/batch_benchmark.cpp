@@ -245,6 +245,8 @@ static void benchmark_soa1(const std::string& filename, int initial_number) {
             std::copy(initial_oscillator_soa_batch.zeta.begin(),
                       initial_oscillator_soa_batch.zeta.end(),
                       working_oscillator_soa_batch.zeta.begin());
+            working_oscillator_soa_batch.active_indices =
+                initial_oscillator_soa_batch.active_indices;
 
             // 计时区间只包含核心批量更新，不包含初始化、复制、校验和输出。
             const auto start = std::chrono::steady_clock::now();

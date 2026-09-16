@@ -47,7 +47,7 @@ int main() {
     constexpr int oscillator_number = 30000;
     constexpr int width = 1025;
     constexpr int height = 1025;
-    constexpr double time_scale = 0.1;
+    constexpr double time_scale = 0.5;
 
     const fs::path output_directory = fs::path(PROJECT01_SOURCE_DIR) / "results";
     fs::create_directories(output_directory);
@@ -114,7 +114,7 @@ int main() {
             renderer.render(work_oscillators, buffer, 3, 10);
             RGFW_window_blitSurface(window, surface);
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(25));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     RGFW_surface_free(surface);
     RGFW_window_close(window);

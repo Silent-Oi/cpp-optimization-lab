@@ -89,10 +89,9 @@ struct OscillatorSoABatch {
 
     std::vector<double> omega;
     std::vector<double> zeta;
+
+    std::vector<int> active_indices;
 };
-
-
-
 
 
 }  // namespace oscillator

@@ -5,12 +5,14 @@
 #include <numbers>
 #include <random>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 #include "state.h"
 #include "underdamped_oscillator.h"
 
 namespace oscillator {
+double eps_energy = 1E-12;
 
 OscillatorAoSBatch make_oscillator_aos_batch(int number, double dt, int seed) {
     if (number < 0) {
@@ -96,6 +98,7 @@ BatchResults aos_batch_report(OscillatorAoSBatch& aos_batch_updated) {
             .finite = finite};
 }
 
+
 OscillatorSoABatch make_oscillator_soa_batch(int number, double dt, int seed) {
     if (number < 0) {
         throw std::invalid_argument("oscillator number must be non-negative");
@@ -115,6 +118,7 @@ OscillatorSoABatch make_oscillator_soa_batch(int number, double dt, int seed) {
         .m11 = std::vector<double>(count),
         .omega = std::vector<double>(count),
         .zeta = std::vector<double>(count),
+        .active_indices = std::vector<int>(count),
     };
 
     for (int i = 0; i < number; ++i) {
@@ -132,13 +136,15 @@ OscillatorSoABatch make_oscillator_soa_batch(int number, double dt, int seed) {
         soa_batch.m01[i] = step_coefficients.m01;
         soa_batch.m10[i] = step_coefficients.m10;
         soa_batch.m11[i] = step_coefficients.m11;
+
+        soa_batch.active_indices[i] = i;
     }
 
     return soa_batch;
 }
 
 OscillatorSoABatch make_oscillator_soa_batch(int number, double dt, int seed, double omega,
-                                             double zeta) {
+                                                      double zeta) {
     if (number < 0) {
         throw std::invalid_argument("oscillator number must be non-negative");
     }
@@ -155,6 +161,7 @@ OscillatorSoABatch make_oscillator_soa_batch(int number, double dt, int seed, do
         .m11 = std::vector<double>(count),
         .omega = std::vector<double>(count),
         .zeta = std::vector<double>(count),
+        .active_indices = std::vector<int>(count),
     };
 
     UnderdampedOscillator system(omega, zeta);
@@ -173,19 +180,37 @@ OscillatorSoABatch make_oscillator_soa_batch(int number, double dt, int seed, do
         soa_batch.m01[i] = step_coefficients.m01;
         soa_batch.m10[i] = step_coefficients.m10;
         soa_batch.m11[i] = step_coefficients.m11;
+
+        soa_batch.active_indices[i] = i;
     }
 
     return soa_batch;
 }
 
-void update_soa_batch_step(OscillatorSoABatch& soa_batch) {
-    const std::size_t N = soa_batch.omega.size();
-    for (std::size_t i = 0; i < N; ++i) {
-        const double old_position = soa_batch.position[i];
-        const double old_velocity = soa_batch.velocity[i];
+double system_energy(const double& omega, const double& position, const double& velocity) {
+    return 0.5 * velocity * velocity + 0.5 * omega * omega * position * position;
+}
 
-        soa_batch.position[i] = soa_batch.m00[i] * old_position + soa_batch.m01[i] * old_velocity;
-        soa_batch.velocity[i] = soa_batch.m10[i] * old_position + soa_batch.m11[i] * old_velocity;
+
+void update_soa_batch_step(OscillatorSoABatch& soa_batch) {
+    for (std::size_t i = 0; i < soa_batch.active_indices.size();) {
+        int batch_index = soa_batch.active_indices[i];
+        const double old_position = soa_batch.position[batch_index];
+        const double old_velocity = soa_batch.velocity[batch_index];
+
+        double energy = system_energy(soa_batch.omega[batch_index], old_position, old_velocity);
+
+        if (energy < eps_energy) {
+            soa_batch.active_indices[i] = std::move(soa_batch.active_indices.back());
+            soa_batch.active_indices.pop_back();
+            continue;
+        }
+
+        soa_batch.position[batch_index] =
+            soa_batch.m00[batch_index] * old_position + soa_batch.m01[batch_index] * old_velocity;
+        soa_batch.velocity[batch_index] =
+            soa_batch.m10[batch_index] * old_position + soa_batch.m11[batch_index] * old_velocity;
+        ++i;
     }
 }
 
