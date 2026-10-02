@@ -14,14 +14,16 @@
 #include "oscillator_batch.h"
 #include "state.h"
 
+
+
 // AoS benchmark harness configuration.
-// number 在第一次测量前翻倍
-// 固定 step 和 seed，使不同 N 使用相同演化条件；cycle 表示每个 N 的重复测量次数。
+// step/number 在第一次测量前翻倍
+// 固定 step/number 和 seed，使不同 N 使用相同演化条件；cycle 表示每个 N 的重复测量次数。
 namespace {
 const int cycle = 7;
 int number = 128;
-const int number_power = 15;
-const int step = 100;
+const int power = 15;
+const int step = 128;
 constexpr int seed = 1234;
 constexpr double dt = 0.123;
 }  // namespace
@@ -32,6 +34,8 @@ constexpr double dt = 0.123;
 // - primary metric: ns per oscillator-step update
 
 namespace fs = std::filesystem;
+
+// ################## 实验一 同规模下AOS与SOA之间的对比############################
 
 namespace benchmark {
 
@@ -75,8 +79,9 @@ static void print_bench_results(const std::vector<benchmark::BenchResults>& benc
         std::cout << std::setprecision(10) << '\n';
     }
 }
-
-static void benchmark_aos1(const std::string& filename, int initial_number) {
+}
+namespace layout_experiment{
+    static void benchmark_aos1(const std::string& filename, int initial_number) {
     // 始终写入工作结果文件；确认一次测量有效后，再将其另存为 *_baseline.csv 提交。
     // 这样普通试跑不会直接覆盖仓库中的冻结 baseline。
     const fs::path result_directory = fs::path(PROJECT01_SOURCE_DIR) / "benchmarks" / "results";
@@ -94,7 +99,7 @@ static void benchmark_aos1(const std::string& filename, int initial_number) {
     // 输出基础信息
     std::cout << std::setprecision(10)
               << "*******************     BENTCHMARK AOS     *********************" << '\n';
-    for (int j = 0; j < number_power; ++j) {
+    for (int j = 0; j < power; ++j) {
         initial_number = initial_number * 2;
         std::uint64_t counts =
             static_cast<std::uint64_t>(initial_number) * static_cast<std::uint64_t>(step);
@@ -189,7 +194,7 @@ static void benchmark_soa1(const std::string& filename, int initial_number) {
     // 输出基础信息
     std::cout << std::setprecision(10)
               << "*******************     BENTCHMARK SOA     *********************" << '\n';
-    for (int j = 0; j < number_power; ++j) {
+    for (int j = 0; j < power; ++j) {
         initial_number = initial_number * 2;
         std::uint64_t counts =
             static_cast<std::uint64_t>(initial_number) * static_cast<std::uint64_t>(step);
@@ -305,13 +310,13 @@ static void benchmark_soa1(const std::string& filename, int initial_number) {
 int main() {
     std::cout << std::setprecision(10) << "seed: " << seed << '\n';
     std::cout << std::setprecision(10) << "dt: " << dt << '\n';
-    std::cout << std::setprecision(10) << "number_power: " << number_power << '\n';
+    std::cout << std::setprecision(10) << "number_power: " << power << '\n';
     std::cout << std::setprecision(10) << '\n';
 
     std::string filename_aos = "aos_benchmark.csv";
     std::string filename_soa = "soa_benchmark.csv";
-    benchmark::benchmark_aos1(filename_aos, number);
-    benchmark::benchmark_soa1(filename_soa, number);
+    layout_experiment::benchmark_aos1(filename_aos, number);
+    layout_experiment::benchmark_soa1(filename_soa, number);
 
     // 计时batch更新
 }

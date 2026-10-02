@@ -24,7 +24,8 @@ BatchResults aos_batch_report(OscillatorAoSBatch& aos_batch_updated);
 OscillatorSoABatch make_oscillator_soa_batch(int number, double dt, int seed);
 OscillatorSoABatch make_oscillator_soa_batch(int number, double dt, int seed, double omega,
                                              double zeta);
-
+void update_soa_batch_step_no_termination(OscillatorSoABatch_no_termination& soa_batch);
+void update_soa_batch_no_termination(OscillatorSoABatch_no_termination& soa_batch, int step);
 void update_soa_batch_step(OscillatorSoABatch& soa_batch);
 void update_soa_batch(OscillatorSoABatch& soa_batch, int step);
 

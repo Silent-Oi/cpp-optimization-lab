@@ -93,5 +93,18 @@ struct OscillatorSoABatch {
     std::vector<int> active_indices;
 };
 
+struct OscillatorSoABatch_no_termination {
+    std::vector<double> position;
+    std::vector<double> velocity;
+
+    std::vector<double> m00;
+    std::vector<double> m01;
+    std::vector<double> m10;
+    std::vector<double> m11;
+
+    std::vector<double> omega;
+    std::vector<double> zeta;
+};
+
 
 }  // namespace oscillator

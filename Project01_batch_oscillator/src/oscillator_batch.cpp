@@ -98,6 +98,11 @@ BatchResults aos_batch_report(OscillatorAoSBatch& aos_batch_updated) {
             .finite = finite};
 }
 
+// ============================================================================
+// SOA振子相关
+// ============================================================================
+
+// ---- SOA振子创建 --------------------------------------------------------------
 
 OscillatorSoABatch make_oscillator_soa_batch(int number, double dt, int seed) {
     if (number < 0) {
@@ -144,7 +149,7 @@ OscillatorSoABatch make_oscillator_soa_batch(int number, double dt, int seed) {
 }
 
 OscillatorSoABatch make_oscillator_soa_batch(int number, double dt, int seed, double omega,
-                                                      double zeta) {
+                                             double zeta) {
     if (number < 0) {
         throw std::invalid_argument("oscillator number must be non-negative");
     }
@@ -187,10 +192,36 @@ OscillatorSoABatch make_oscillator_soa_batch(int number, double dt, int seed, do
     return soa_batch;
 }
 
+// ---- 无终止SOA振子更新 --------------------------------------------------------------
+
+void update_soa_batch_step_no_termination(OscillatorSoABatch_no_termination& soa_batch) {
+    for (std::size_t i = 0; i < soa_batch.omega.size();) {
+        int batch_index = i;
+        const double old_position = soa_batch.position[batch_index];
+        const double old_velocity = soa_batch.velocity[batch_index];
+        soa_batch.position[batch_index] =
+            soa_batch.m00[batch_index] * old_position + soa_batch.m01[batch_index] * old_velocity;
+        soa_batch.velocity[batch_index] =
+            soa_batch.m10[batch_index] * old_position + soa_batch.m11[batch_index] * old_velocity;
+        ++i;
+    }
+}
+
+void update_soa_batch_no_termination(OscillatorSoABatch_no_termination& soa_batch, int step) {
+    if (step < 0) {
+        throw std::invalid_argument("step must be non-negative");
+    }
+
+    for (int i = 0; i < step; ++i) {
+        update_soa_batch_step_no_termination(soa_batch);
+    };
+}
+
+// ---- 带终止的SOA振子更新 --------------------------------------------------------------
+
 double system_energy(const double& omega, const double& position, const double& velocity) {
     return 0.5 * velocity * velocity + 0.5 * omega * omega * position * position;
 }
-
 
 void update_soa_batch_step(OscillatorSoABatch& soa_batch) {
     for (std::size_t i = 0; i < soa_batch.active_indices.size();) {
@@ -224,6 +255,7 @@ void update_soa_batch(OscillatorSoABatch& soa_batch, int step) {
     };
 }
 
+// ---- SOA振子输出相关信息 --------------------------------------------------------------
 BatchResults soa_batch_report(OscillatorSoABatch& soa_batch_updated) {
     std::size_t N = soa_batch_updated.omega.size();
     double state_checksum = 0.0;
@@ -253,5 +285,4 @@ BatchResults soa_batch_report(OscillatorSoABatch& soa_batch_updated) {
             .max_abs_v = max_abs_v,
             .finite = finite};
 }
-
 }  // namespace oscillator
