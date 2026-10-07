@@ -46,6 +46,13 @@ struct StepCoefficients {
     double m11;
 };
 
+// ============================================================================
+// AOS振子相关
+// ============================================================================
+
+// ---- AOS振子数据结构 8 * 8 = 64
+// --------------------------------------------------------------
+
 // AoS元素：一个对象完整保存一个振子的全部数据。
 // position、velocity 是每步更新的状态；omega、zeta 是初始化后不变的原始参数；
 // m00～m11 是由原始参数和固定 dt 预计算得到的更新系数。
@@ -60,6 +67,66 @@ struct OscillatorAoS {
     double m01;
     double m10;
     double m11;
+};
+
+// ---- 非对齐 AOS振子数据结构 8 * 8 + 4 = 68
+// --------------------------------------------------------------
+
+struct OscillatorAoSWithPayload {
+    double position;
+    double velocity;
+
+    double omega;
+    double zeta;
+
+    double m00;
+    double m01;
+    double m10;
+    double m11;
+
+    int unused_payload = 0;
+};
+
+// ---- AOS Batch 结构
+// --------------------------------------------------------------
+
+using OscillatorAoSBatch = std::vector<OscillatorAoS>;
+using OscillatorAoSBatchWithPayload = std::vector<OscillatorAoSWithPayload>;
+
+// ============================================================================
+// SOA振子相关
+// ============================================================================
+
+// ---- SOA振子结构 --------------------------------------------------------------
+
+struct OscillatorSoABatch {
+    std::vector<double> position;
+    std::vector<double> velocity;
+
+    std::vector<double> m00;
+    std::vector<double> m01;
+    std::vector<double> m10;
+    std::vector<double> m11;
+
+    std::vector<double> omega;
+    std::vector<double> zeta;
+
+    std::vector<int> active_indices;
+};
+
+// ---- 无终止SOA振子结构 --------------------------------------------------------------
+
+struct OscillatorSoABatch_no_termination {
+    std::vector<double> position;
+    std::vector<double> velocity;
+
+    std::vector<double> m00;
+    std::vector<double> m01;
+    std::vector<double> m10;
+    std::vector<double> m11;
+
+    std::vector<double> omega;
+    std::vector<double> zeta;
 };
 
 // 对一次批量运行结果的紧凑摘要，用于固定输入运行和回归检查。
@@ -77,34 +144,5 @@ struct BatchResults {
                std::abs(max_abs_v - other.max_abs_v) < eps && finite == other.finite;
     }
 };
-
-struct OscillatorSoABatch {
-    std::vector<double> position;
-    std::vector<double> velocity;
-
-    std::vector<double> m00;
-    std::vector<double> m01;
-    std::vector<double> m10;
-    std::vector<double> m11;
-
-    std::vector<double> omega;
-    std::vector<double> zeta;
-
-    std::vector<int> active_indices;
-};
-
-struct OscillatorSoABatch_no_termination {
-    std::vector<double> position;
-    std::vector<double> velocity;
-
-    std::vector<double> m00;
-    std::vector<double> m01;
-    std::vector<double> m10;
-    std::vector<double> m11;
-
-    std::vector<double> omega;
-    std::vector<double> zeta;
-};
-
 
 }  // namespace oscillator

@@ -14,28 +14,24 @@
 #include "oscillator_batch.h"
 #include "state.h"
 
+namespace fs = std::filesystem;
 
+// ============================================================================
+// 实验基础数据
+// ============================================================================
 
-// AoS benchmark harness configuration.
-// step/number 在第一次测量前翻倍
-// 固定 step/number 和 seed，使不同 N 使用相同演化条件；cycle 表示每个 N 的重复测量次数。
 namespace {
 const int cycle = 7;
-int number = 128;
-const int power = 15;
-const int step = 128;
+int number = 32;
+const int power = 16;
+const int step = 64;
 constexpr int seed = 1234;
 constexpr double dt = 0.123;
 }  // namespace
 
-// - Release, single thread
-// - timed region contains only update_aos_batch()
-// - one update means advancing one oscillator by one step
-// - primary metric: ns per oscillator-step update
-
-namespace fs = std::filesystem;
-
-// ################## 实验一 同规模下AOS与SOA之间的对比############################
+// ============================================================================
+// benchmark 相关函数与结构
+// ============================================================================
 
 namespace benchmark {
 
@@ -46,6 +42,23 @@ struct BenchResults {
     double update_nanosecond_per_oscillator_step;
     oscillator::BatchResults batch_results;
 };
+
+static std::ofstream create_result_csv(const std::string& experiment_name,
+    const std::string& filename) {
+    const fs::path result_directory =
+        fs::path(PROJECT01_SOURCE_DIR) / "benchmarks" / experiment_name / "results";
+    fs::create_directories(result_directory);
+
+    const fs::path csv_path = result_directory / filename;
+    std::ofstream csv(csv_path);
+
+    if (!csv) {
+        throw std::runtime_error("无法创建 CSV 文件: " + csv_path.string());
+    }
+
+    return csv;
+}
+
 
 static double calu_average_time(const std::span<double>& time_array) {
     if (time_array.empty()) {
@@ -79,26 +92,34 @@ static void print_bench_results(const std::vector<benchmark::BenchResults>& benc
         std::cout << std::setprecision(10) << '\n';
     }
 }
-}
-namespace layout_experiment{
-    static void benchmark_aos1(const std::string& filename, int initial_number) {
-    // 始终写入工作结果文件；确认一次测量有效后，再将其另存为 *_baseline.csv 提交。
-    // 这样普通试跑不会直接覆盖仓库中的冻结 baseline。
-    const fs::path result_directory = fs::path(PROJECT01_SOURCE_DIR) / "benchmarks" / "results";
-    fs::create_directories(result_directory);
+}  // namespace benchmark
 
-    const fs::path csv_path = result_directory / filename;
-    std::ofstream csv(csv_path);
+// ============================================================================
+// 实验一 同规模下AOS与SOA之间的对比
+// ============================================================================
 
-    if (!csv) {
-        throw std::runtime_error("无法创建 CSV 文件: " + csv_path.string());
-    }
+namespace layout_experiment {
 
+// ============================================================================
+// AOS benchmark
+// ============================================================================
+
+// ---- 创建AOS实验结果CSV文件与数据记录形式
+// --------------------------------------------------------------
+
+static void benchmark_aos(const std::string& experiment_name, const std::string& filename,
+                          int initial_number) {
+
+    std::ofstream csv = benchmark::create_result_csv(experiment_name, filename);
     csv << "N,steps,average_ns,median_ns\n";
 
     // 输出基础信息
     std::cout << std::setprecision(10)
               << "*******************     BENTCHMARK AOS     *********************" << '\n';
+
+    // ---- 进入AOS更新计算，总共实验数量为 power
+    // --------------------------------------------------------------
+
     for (int j = 0; j < power; ++j) {
         initial_number = initial_number * 2;
         std::uint64_t counts =
@@ -118,6 +139,9 @@ namespace layout_experiment{
 
         oscillator::OscillatorAoSBatch working_oscillator_aos_batch(
             initial_oscillator_aos_batch.size());
+
+        // ---- 进入AOS更新计算，总共实验次数为 cycle
+        // --------------------------------------------------------------
 
         for (int i = 0; i < cycle; ++i) {
             // 每轮从完全相同的输入开始；复制发生在计时区间之外。
@@ -156,6 +180,9 @@ namespace layout_experiment{
             }
         }
 
+        // ---- 输出保存实验结果
+        // --------------------------------------------------------------
+
         // CSV 保存当前 N 的算术平均值；逐轮原始数据仍打印到控制台便于观察抖动。
         std::sort(ns_records.begin(), ns_records.end());
         const double median_ns = ns_records[cycle / 2];
@@ -176,44 +203,47 @@ namespace layout_experiment{
     }
 }
 
-static void benchmark_soa1(const std::string& filename, int initial_number) {
-    // 始终写入工作结果文件；确认一次测量有效后，再将其另存为 *_baseline.csv 提交。
-    // 这样普通试跑不会直接覆盖仓库中的冻结 baseline。
-    const fs::path result_directory = fs::path(PROJECT01_SOURCE_DIR) / "benchmarks" / "results";
-    fs::create_directories(result_directory);
+// ============================================================================
+// SOA benchmark
+// ============================================================================
 
-    const fs::path csv_path = result_directory / filename;
-    std::ofstream csv(csv_path);
+// ---- 创建SOA实验结果CSV文件与数据记录形式
+// --------------------------------------------------------------
 
-    if (!csv) {
-        throw std::runtime_error("无法创建 CSV 文件: " + csv_path.string());
-    }
+static void benchmark_soa(const std::string& experiment_name, const std::string& filename,
+                          int initial_number) {
 
+    std::ofstream csv = benchmark::create_result_csv(experiment_name, filename);
     csv << "N,steps,average_ns,median_ns\n";
 
     // 输出基础信息
     std::cout << std::setprecision(10)
               << "*******************     BENTCHMARK SOA     *********************" << '\n';
+
+    // ---- 进入AOS更新计算，总共实验数量为 power
+    // --------------------------------------------------------------
+
     for (int j = 0; j < power; ++j) {
         initial_number = initial_number * 2;
         std::uint64_t counts =
             static_cast<std::uint64_t>(initial_number) * static_cast<std::uint64_t>(step);
 
-        const oscillator::OscillatorSoABatch initial_oscillator_soa_batch =
-            oscillator::make_oscillator_soa_batch(initial_number, dt, seed);
+        const oscillator::OscillatorSoABatch_no_termination initial_oscillator_soa_batch =
+            oscillator::make_oscillator_soa_batch_no_termination(initial_number, dt, seed);
 
         const std::size_t N = initial_oscillator_soa_batch.omega.size();
 
         {
             // 使用独立副本预热代码路径，避免改变后续各轮共享的初始状态；预热不计时。
-            oscillator::OscillatorSoABatch warmup_batch = initial_oscillator_soa_batch;
-            oscillator::update_soa_batch(warmup_batch, step);
+            oscillator::OscillatorSoABatch_no_termination warmup_batch =
+                initial_oscillator_soa_batch;
+            oscillator::update_soa_batch_no_termination(warmup_batch, step);
         }
 
         std::array<double, cycle> ns_records;
         std::vector<benchmark::BenchResults> bench_results(cycle);
 
-        oscillator::OscillatorSoABatch working_oscillator_soa_batch{
+        oscillator::OscillatorSoABatch_no_termination working_oscillator_soa_batch{
             .position = std::vector<double>(N),
             .velocity = std::vector<double>(N),
             .m00 = std::vector<double>(N),
@@ -223,6 +253,9 @@ static void benchmark_soa1(const std::string& filename, int initial_number) {
             .omega = std::vector<double>(N),
             .zeta = std::vector<double>(N),
         };
+
+        // ---- 进入AOS更新计算，总共实验次数为 cycle
+        // --------------------------------------------------------------
 
         for (int i = 0; i < cycle; ++i) {
             // 每轮从完全相同的输入开始；复制发生在计时区间之外。
@@ -250,12 +283,10 @@ static void benchmark_soa1(const std::string& filename, int initial_number) {
             std::copy(initial_oscillator_soa_batch.zeta.begin(),
                       initial_oscillator_soa_batch.zeta.end(),
                       working_oscillator_soa_batch.zeta.begin());
-            working_oscillator_soa_batch.active_indices =
-                initial_oscillator_soa_batch.active_indices;
 
             // 计时区间只包含核心批量更新，不包含初始化、复制、校验和输出。
             const auto start = std::chrono::steady_clock::now();
-            oscillator::update_soa_batch(working_oscillator_soa_batch, step);
+            oscillator::update_soa_batch_no_termination(working_oscillator_soa_batch, step);
             const auto end = std::chrono::steady_clock::now();
             const auto run_time_second = std::chrono::duration<double>(end - start).count();
 
@@ -285,6 +316,9 @@ static void benchmark_soa1(const std::string& filename, int initial_number) {
             }
         }
 
+        // ---- 输出保存实验结果
+        // --------------------------------------------------------------
+
         // CSV 保存当前 N 的算术平均值；逐轮原始数据仍打印到控制台便于观察抖动。
         std::sort(ns_records.begin(), ns_records.end());
         const double median_ns = ns_records[cycle / 2];
@@ -294,7 +328,6 @@ static void benchmark_soa1(const std::string& filename, int initial_number) {
         // 输出结果
         std::cout << std::setprecision(10) << "########################################" << '\n';
         std::cout << std::setprecision(10) << "N: " << initial_number << '\n';
-        // 这里只报告一个 AoS batch 的有效载荷；harness 还会持有预热和工作副本。
         std::cout << std::setprecision(10) << "size of input: "
                   << static_cast<std::size_t>(initial_number) * sizeof(oscillator::OscillatorAoS)
                   << '\n';
@@ -304,19 +337,41 @@ static void benchmark_soa1(const std::string& filename, int initial_number) {
         benchmark::print_bench_results(bench_results);
     }
 }
+}  // namespace layout_experiment
 
-}  // namespace benchmark
+// ============================================================================
+// 实验二 数据结构大小（整齐）对计算性能的影响
+// ============================================================================
+
+namespace aos_size_experiment {
+
+// ============================================================================
+// 对齐数据结构 benchmark
+// ============================================================================
+
+// ---- 创建对齐数据实验结果CSV文件与数据记录形式
+// --------------------------------------------------------------
+
+}
 
 int main() {
+
+    // ---- 打印实验参数
+    // --------------------------------------------------------------
+
     std::cout << std::setprecision(10) << "seed: " << seed << '\n';
     std::cout << std::setprecision(10) << "dt: " << dt << '\n';
     std::cout << std::setprecision(10) << "number_power: " << power << '\n';
     std::cout << std::setprecision(10) << '\n';
 
+    // ============================================================================
+    // 实验一 AOS vs SOA
+    // ============================================================================
+
+    std::string experiment_name = "layout_experiment";
+
     std::string filename_aos = "aos_benchmark.csv";
     std::string filename_soa = "soa_benchmark.csv";
-    layout_experiment::benchmark_aos1(filename_aos, number);
-    layout_experiment::benchmark_soa1(filename_soa, number);
-
-    // 计时batch更新
+    layout_experiment::benchmark_aos(experiment_name, filename_aos, number);
+    layout_experiment::benchmark_soa(experiment_name, filename_soa, number);
 }
