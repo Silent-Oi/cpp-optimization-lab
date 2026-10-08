@@ -68,6 +68,20 @@ python Project01_batch_oscillator/benchmarks/scripts/plot_termination_experiment
 横轴为请求的更新步数（以 2 为底的对数刻度），蓝色表示有终止，橙色表示无终止，实线表示平均值，虚线表示中位数。脚本检查两组数据的 Steps、N 是否匹配，并要求振子数量 N 固定。
 纵轴直接使用 CSV 的耗时，归一化分母为初始振子数 N × 请求步数 Steps。有终止版本会跳过已终止振子的更新，因此该指标用于比较相同请求步数下的运行成本，不代表每次实际执行更新的耗时；两种版本的最终状态也可能因终止近似而不同。
 
+### 向量化实验绘图
+
+在仓库根目录运行：
+
+```powershell
+python Project01_batch_oscillator/benchmarks/scripts/plot_vectorization_experiment.py
+```
+
+脚本从 `vectorization_experiment/results/` 选择时间标识最新的完整 `soa_benchmark`、`soa_scalar_benchmark` 配对，支持 `.csv<时间标识>` 和 `_<时间标识>.csv` 两种命名方式。图片保存到 `vectorization_experiment/figures/vectorization_benchmark_<时间标识>.png`。
+同样支持 `--timestamp YYYYMMDD_HHMMSS` 和 `--show`；更新的结果不完整时提示并使用上一组完整结果。没有带时间标识的文件时，读取 `soa_benchmark.csv`、`soa_scalar_benchmark.csv`。
+
+横轴为振子数量（以 2 为底的对数刻度），纵轴为每振子每步耗时。蓝色表示 SoA 默认路径，橙色表示 SoA scalar 路径，实线表示平均值，虚线表示中位数。脚本检查两组数据的 N、步数是否匹配，并要求更新步数固定。
+曲线名称对应 benchmark 调用入口；是否实际生成向量指令或保持标量执行，需要结合编译器诊断或汇编确认，CSV 和绘图脚本不验证这一点。
+
 ## 后续实验与结果保存
 
 - AoS 大小实验比较普通结构体和带额外字段的结构体，保持更新公式和输入一致；本轮不加入 packed 布局或专门的非对齐访问实验。

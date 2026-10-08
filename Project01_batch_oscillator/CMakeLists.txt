@@ -96,6 +96,7 @@ target_link_libraries(oscillator_visualizer
 
 # Project01 源码包含中文注释；明确要求 MSVC 按 UTF-8 解析源文件。
 if(MSVC)
+    target_compile_options(oscillator_core PRIVATE /Qvec-report:2 /FAsu)
     target_compile_options(oscillator_core PRIVATE /utf-8)
     target_compile_options(harmonic_oscillator PRIVATE /utf-8)
     target_compile_options(underdamped_oscillator PRIVATE /utf-8)

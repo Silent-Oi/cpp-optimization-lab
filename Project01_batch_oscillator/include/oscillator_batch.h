@@ -8,7 +8,6 @@ namespace oscillator {
 
 // vector 保证元素连续存储。
 
-
 // ============================================================================
 // AOS振子相关
 // ============================================================================
@@ -44,7 +43,6 @@ void update_aos_batch_with_payload(OscillatorAoSBatchWithPayload& aos_batch, int
 BatchResults aos_batch_report(OscillatorAoSBatch& aos_batch_updated);
 BatchResults aos_batch_report(OscillatorAoSBatchWithPayload& aos_batch_updated);
 
-
 // ============================================================================
 // SOA振子相关
 // ============================================================================
@@ -72,6 +70,8 @@ OscillatorSoABatch_no_termination make_oscillator_soa_batch_no_termination(int n
 
 void update_soa_batch_step_no_termination(OscillatorSoABatch_no_termination& soa_batch);
 void update_soa_batch_no_termination(OscillatorSoABatch_no_termination& soa_batch, int step);
+void update_soa_batch_step_no_termination_scalar(OscillatorSoABatch_no_termination& soa_batch);
+void update_soa_batch_no_termination_scalar(OscillatorSoABatch_no_termination& soa_batch, int step);
 
 // ---- SOA振子输出相关信息 --------------------------------------------------------------
 

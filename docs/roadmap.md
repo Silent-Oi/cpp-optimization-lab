@@ -27,7 +27,7 @@
 
 实现大量独立状态的连续更新，理解连续内存、AoS/SoA、自动向量化、多线程与 CPU 像素绘制。
 
-当前收尾顺序为振子终止、自动向量化理解、简单多线程。已有循环能够自动向量化时，以诊断和理解生成代码为主；不要求额外实现手写 SIMD。CUDA 在 Project02 引入。
+AoS/SoA 布局、AoS 对象大小、终止机制及自动向量化的 benchmark 已有实现与结果。自动向量化阶段已完成诊断、循环调整、核心汇编阅读和性能对照；下一步为简单多线程，随后完成 Project01。正确性对照随实现改动进行，终止边界的补充验证留到收尾。CUDA 在 Project02 引入。
 [Project01 — roadmap.md](../Project01_batch_oscillator/docs/roadmap.md)
 
 

@@ -23,7 +23,7 @@ namespace fs = std::filesystem;
 
 namespace {
 const int cycle = 7;
-int number = 32;
+int number = 64;
 const int power = 16;
 const int step = 16;
 constexpr int seed = 1234;
@@ -111,7 +111,6 @@ static void print_bench_results(const std::vector<benchmark::BenchResults>& benc
 
 namespace layout_experiment {
 
-// ============================================================================
 // AOS benchmark
 // ============================================================================
 
@@ -213,7 +212,6 @@ static void benchmark_aos(const std::string& data, const std::string& experiment
     }
 }
 
-// ============================================================================
 // SOA benchmark
 // ============================================================================
 
@@ -346,6 +344,7 @@ static void benchmark_soa(const std::string& data, const std::string& experiment
         benchmark::print_bench_results(bench_results);
     }
 }
+
 }  // namespace layout_experiment
 
 // ============================================================================
@@ -354,7 +353,6 @@ static void benchmark_soa(const std::string& data, const std::string& experiment
 
 namespace aos_size_experiment {
 
-// ============================================================================
 // 对齐数据结构 benchmark
 // ============================================================================
 
@@ -459,7 +457,6 @@ static void benchmark_aos(const std::string& data, const std::string& experiment
     }
 }
 
-// ============================================================================
 // 带额外字段数据结构 benchmark
 // ============================================================================
 
@@ -572,7 +569,6 @@ static void benchmark_aos_with_payload(const std::string& data, const std::strin
 
 namespace termination_experiment {
 
-// ============================================================================
 // 有终止SOA benchmark
 // ============================================================================
 
@@ -680,7 +676,6 @@ static void benchmark_soa(const std::string& data, const std::string& experiment
     }
 }
 
-// ============================================================================
 // 无终止SOA benchmark
 // ============================================================================
 
@@ -791,6 +786,234 @@ static void benchmark_soa_no_termination(const std::string& data,
 
 }  // namespace termination_experiment
 
+// ============================================================================
+// 实验四 向量化收益
+// ============================================================================
+
+namespace vectorization_experiment {
+
+// 向量化无终止SOA benchmark
+// ============================================================================
+
+static void benchmark_soa(const std::string& data, const std::string& experiment_name,
+                          const std::string& filename, int initial_number) {
+    // ---- 创建向量化无终止SOA实验结果CSV文件与数据记录形式
+    // --------------------------------------------------------------
+
+    std::ofstream csv = benchmark::create_result_csv(data, experiment_name, filename);
+    csv << "N,steps,average_ns,median_ns\n";
+
+    // 输出基础信息
+    std::cout << std::setprecision(10)
+              << "*******************     BENTCHMARK SOA     *********************" << '\n';
+
+    // ---- 进入向量化无终止SOA更新计算，总共实验数量为 power
+    // --------------------------------------------------------------
+
+    for (int j = 0; j < power; ++j) {
+        initial_number = initial_number * 2;
+        std::uint64_t counts =
+            static_cast<std::uint64_t>(initial_number) * static_cast<std::uint64_t>(step);
+
+        const oscillator::OscillatorSoABatch_no_termination initial_oscillator_soa_batch =
+            oscillator::make_oscillator_soa_batch_no_termination(initial_number, dt, seed);
+
+        const std::size_t N = initial_oscillator_soa_batch.omega.size();
+
+        {
+            // 使用独立副本预热代码路径，避免改变后续各轮共享的初始状态；预热不计时。
+            oscillator::OscillatorSoABatch_no_termination warmup_batch =
+                initial_oscillator_soa_batch;
+            oscillator::update_soa_batch_no_termination(warmup_batch, step);
+        }
+
+        std::array<double, cycle> ns_records;
+        std::vector<benchmark::BenchResults> bench_results(cycle);
+
+        oscillator::OscillatorSoABatch_no_termination working_oscillator_soa_batch{
+            .position = std::vector<double>(N),
+            .velocity = std::vector<double>(N),
+            .m00 = std::vector<double>(N),
+            .m01 = std::vector<double>(N),
+            .m10 = std::vector<double>(N),
+            .m11 = std::vector<double>(N),
+            .omega = std::vector<double>(N),
+            .zeta = std::vector<double>(N),
+        };
+
+        // ---- 进入向量化无终止SOA更新计算，总共实验次数为 cycle
+        // --------------------------------------------------------------
+
+        for (int i = 0; i < cycle; ++i) {
+            // 每轮从完全相同的输入开始；复制发生在计时区间之外。
+            working_oscillator_soa_batch = initial_oscillator_soa_batch;
+
+            // 计时区间只包含核心批量更新，不包含初始化、复制、校验和输出。
+            const auto start = std::chrono::steady_clock::now();
+            oscillator::update_soa_batch_no_termination(working_oscillator_soa_batch, step);
+            const auto end = std::chrono::steady_clock::now();
+            const auto run_time_second = std::chrono::duration<double>(end - start).count();
+
+            // 在计时后消费全部最终状态：既检查数值有效性，也保留可比较的结果摘要。
+            oscillator::BatchResults current_batch_result =
+                oscillator::soa_batch_report(working_oscillator_soa_batch);
+            if (!current_batch_result.finite) {
+                throw std::runtime_error("振子更新结果异常");
+            }
+
+            double nanosecond_per_oscillator_step = run_time_second * 1e9 / counts;
+
+            ns_records[i] = nanosecond_per_oscillator_step;
+            const benchmark::BenchResults current_bench_result = {
+                .current_cycle = i,
+                .run_time_second = run_time_second,
+                .update_oscillator_per_second = counts / run_time_second,
+                .update_nanosecond_per_oscillator_step = nanosecond_per_oscillator_step,
+                .batch_results = current_batch_result,
+            };
+
+            bench_results[i] = current_bench_result;
+
+            // 第 0 轮作为参考；确定性输入应在所有重复测量中得到一致摘要。
+            if (current_batch_result != bench_results[0].batch_results) {
+                throw std::runtime_error("振子更新不一致异常");
+            }
+        }
+
+        // ---- 输出保存实验结果
+        // --------------------------------------------------------------
+
+        // CSV 保存当前 N 的算术平均值；逐轮原始数据仍打印到控制台便于观察抖动。
+        std::sort(ns_records.begin(), ns_records.end());
+        const double median_ns = ns_records[cycle / 2];
+        double average_ns = benchmark::calu_average_time(ns_records);
+        csv << initial_number << ',' << step << ',' << average_ns << ',' << median_ns << '\n';
+
+        // 输出结果
+        std::cout << std::setprecision(10) << "########################################" << '\n';
+        std::cout << std::setprecision(10) << "N: " << initial_number << '\n';
+        std::cout << std::setprecision(10) << "size of input: "
+                  << static_cast<std::size_t>(initial_number) * sizeof(oscillator::OscillatorAoS)
+                  << '\n';
+        std::cout << std::setprecision(10) << "step: " << step << '\n';
+        std::cout << std::setprecision(10) << "counts: " << counts << '\n';
+        std::cout << std::setprecision(10) << '\n';
+        benchmark::print_bench_results(bench_results);
+    }
+}
+
+// 标量无终止SOA benchmark
+// ============================================================================
+
+static void benchmark_soa_scalar(const std::string& data, const std::string& experiment_name,
+                                 const std::string& filename, int initial_number) {
+    // ---- 创建标量无终止SOA实验结果CSV文件与数据记录形式
+    // --------------------------------------------------------------
+
+    std::ofstream csv = benchmark::create_result_csv(data, experiment_name, filename);
+    csv << "N,steps,average_ns,median_ns\n";
+
+    // 输出基础信息
+    std::cout << std::setprecision(10)
+              << "*******************     BENTCHMARK SOA     *********************" << '\n';
+
+    // ---- 进入标量无终止SOA更新计算，总共实验数量为 power
+    // --------------------------------------------------------------
+
+    for (int j = 0; j < power; ++j) {
+        initial_number = initial_number * 2;
+        std::uint64_t counts =
+            static_cast<std::uint64_t>(initial_number) * static_cast<std::uint64_t>(step);
+
+        const oscillator::OscillatorSoABatch_no_termination initial_oscillator_soa_batch =
+            oscillator::make_oscillator_soa_batch_no_termination(initial_number, dt, seed);
+
+        const std::size_t N = initial_oscillator_soa_batch.omega.size();
+
+        {
+            // 使用独立副本预热代码路径，避免改变后续各轮共享的初始状态；预热不计时。
+            oscillator::OscillatorSoABatch_no_termination warmup_batch =
+                initial_oscillator_soa_batch;
+            oscillator::update_soa_batch_no_termination_scalar(warmup_batch, step);
+        }
+
+        std::array<double, cycle> ns_records;
+        std::vector<benchmark::BenchResults> bench_results(cycle);
+
+        oscillator::OscillatorSoABatch_no_termination working_oscillator_soa_batch{
+            .position = std::vector<double>(N),
+            .velocity = std::vector<double>(N),
+            .m00 = std::vector<double>(N),
+            .m01 = std::vector<double>(N),
+            .m10 = std::vector<double>(N),
+            .m11 = std::vector<double>(N),
+            .omega = std::vector<double>(N),
+            .zeta = std::vector<double>(N),
+        };
+
+        // ---- 进入标量无终止SOA更新计算，总共实验次数为 cycle
+        // --------------------------------------------------------------
+
+        for (int i = 0; i < cycle; ++i) {
+            // 每轮从完全相同的输入开始；复制发生在计时区间之外。
+            working_oscillator_soa_batch = initial_oscillator_soa_batch;
+
+            // 计时区间只包含核心批量更新，不包含初始化、复制、校验和输出。
+            const auto start = std::chrono::steady_clock::now();
+            oscillator::update_soa_batch_no_termination_scalar(working_oscillator_soa_batch, step);
+            const auto end = std::chrono::steady_clock::now();
+            const auto run_time_second = std::chrono::duration<double>(end - start).count();
+
+            // 在计时后消费全部最终状态：既检查数值有效性，也保留可比较的结果摘要。
+            oscillator::BatchResults current_batch_result =
+                oscillator::soa_batch_report(working_oscillator_soa_batch);
+            if (!current_batch_result.finite) {
+                throw std::runtime_error("振子更新结果异常");
+            }
+
+            double nanosecond_per_oscillator_step = run_time_second * 1e9 / counts;
+
+            ns_records[i] = nanosecond_per_oscillator_step;
+            const benchmark::BenchResults current_bench_result = {
+                .current_cycle = i,
+                .run_time_second = run_time_second,
+                .update_oscillator_per_second = counts / run_time_second,
+                .update_nanosecond_per_oscillator_step = nanosecond_per_oscillator_step,
+                .batch_results = current_batch_result,
+            };
+
+            bench_results[i] = current_bench_result;
+
+            // 第 0 轮作为参考；确定性输入应在所有重复测量中得到一致摘要。
+            if (current_batch_result != bench_results[0].batch_results) {
+                throw std::runtime_error("振子更新不一致异常");
+            }
+        }
+
+        // ---- 输出保存实验结果
+        // --------------------------------------------------------------
+
+        // CSV 保存当前 N 的算术平均值；逐轮原始数据仍打印到控制台便于观察抖动。
+        std::sort(ns_records.begin(), ns_records.end());
+        const double median_ns = ns_records[cycle / 2];
+        double average_ns = benchmark::calu_average_time(ns_records);
+        csv << initial_number << ',' << step << ',' << average_ns << ',' << median_ns << '\n';
+
+        // 输出结果
+        std::cout << std::setprecision(10) << "########################################" << '\n';
+        std::cout << std::setprecision(10) << "N: " << initial_number << '\n';
+        std::cout << std::setprecision(10) << "size of input: "
+                  << static_cast<std::size_t>(initial_number) * sizeof(oscillator::OscillatorAoS)
+                  << '\n';
+        std::cout << std::setprecision(10) << "step: " << step << '\n';
+        std::cout << std::setprecision(10) << "counts: " << counts << '\n';
+        std::cout << std::setprecision(10) << '\n';
+        benchmark::print_bench_results(bench_results);
+    }
+}
+
+}  // namespace vectorization_experiment
+
 int main() {
     auto data = benchmark::make_run_timestamp();
 
@@ -829,6 +1052,7 @@ int main() {
     filename_aos_with_payload, number);
     */
 
+    /*
     // ============================================================================
     // 实验三 终止对计算的影响
     // ============================================================================
@@ -840,4 +1064,17 @@ int main() {
     termination_experiment::benchmark_soa(data, experiment_name, filename_soa, number);
     termination_experiment::benchmark_soa_no_termination(data, experiment_name,
                                                          filename_soa_no_termination, number);
+    */
+
+    // ============================================================================
+    // 实验四 向量化对计算速度影响
+    // ============================================================================
+
+    std::string experiment_name = "vectorization_experiment";
+
+    std::string filename_soa = "soa_benchmark.csv";
+    std::string filename_soa_scalar = "soa_scalar_benchmark.csv";
+    vectorization_experiment::benchmark_soa(data, experiment_name, filename_soa, number);
+    vectorization_experiment::benchmark_soa_scalar(data, experiment_name, filename_soa_scalar,
+                                                   number);
 }
