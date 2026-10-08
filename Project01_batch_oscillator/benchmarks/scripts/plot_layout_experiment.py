@@ -3,6 +3,8 @@
 import argparse
 import csv
 import math
+import re
+import sys
 from pathlib import Path
 
 import matplotlib
@@ -10,6 +12,44 @@ import matplotlib
 
 BENCHMARK_DIR = Path(__file__).resolve().parent.parent
 EXPERIMENT_DIR = BENCHMARK_DIR / "layout_experiment"
+
+
+def select_results(result_dir, requested_timestamp=None):
+    """Pair timestamped files; use legacy filenames only if none exist."""
+    runs = {}
+    for layout in ("aos", "soa"):
+        pattern = re.compile(
+            rf"{layout}_benchmark(?:_(\d{{8}}_\d{{6}})\.csv|\.csv(\d{{8}}_\d{{6}}))"
+        )
+        files = {}
+        for path in result_dir.glob(f"{layout}_benchmark*"):
+            match = pattern.fullmatch(path.name)
+            if not path.is_file() or match is None:
+                continue
+            timestamp = match.group(1) or match.group(2)
+            if timestamp in files:
+                raise ValueError(f"Multiple {layout.upper()} files for {timestamp}")
+            files[timestamp] = path
+        runs[layout] = files
+
+    complete = runs["aos"].keys() & runs["soa"].keys()
+    available = runs["aos"].keys() | runs["soa"].keys()
+    if requested_timestamp:
+        if requested_timestamp not in complete:
+            raise ValueError(f"No complete AoS/SoA pair for {requested_timestamp}")
+        timestamp = requested_timestamp
+    elif available:
+        if not complete:
+            raise ValueError("Timestamped results exist, but no AoS/SoA pair is complete")
+        timestamp = max(complete)
+        if max(available) > timestamp:
+            print(f"Warning: newer incomplete results skipped; using {timestamp}",
+                  file=sys.stderr)
+    else:
+        return (result_dir / "aos_benchmark.csv",
+                result_dir / "soa_benchmark.csv", None)
+
+    return runs["aos"][timestamp], runs["soa"][timestamp], timestamp
 
 
 def read_results(path):
@@ -38,6 +78,8 @@ def read_results(path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--timestamp", metavar="YYYYMMDD_HHMMSS",
+                        help="plot a specific run instead of the latest complete pair")
     parser.add_argument("--show", action="store_true",
                         help="also open an interactive plot window")
     args = parser.parse_args()
@@ -49,8 +91,9 @@ def main():
 
     result_dir = EXPERIMENT_DIR / "results"
     try:
-        aos = read_results(result_dir / "aos_benchmark.csv")
-        soa = read_results(result_dir / "soa_benchmark.csv")
+        aos_path, soa_path, timestamp = select_results(result_dir, args.timestamp)
+        aos = read_results(aos_path)
+        soa = read_results(soa_path)
         if [row[:2] for row in aos] != [row[:2] for row in soa]:
             raise ValueError("AoS and SoA must have matching N and steps")
         if len({row[1] for row in aos}) != 1:
@@ -71,15 +114,20 @@ def main():
     ax.set_xscale("log", base=2)
     ax.set_xlabel("Oscillator count N")
     ax.set_ylabel("Time per oscillator step (ns; lower is faster)")
-    ax.set_title(f"AoS vs SoA | {aos[0][1]} steps per oscillator")
+    title = f"AoS vs SoA | {aos[0][1]} steps per oscillator"
+    if timestamp:
+        title += f"\nRun: {timestamp}"
+    ax.set_title(title)
     ax.set_ylim(bottom=0)
     ax.grid(True, alpha=0.25)
     ax.legend(ncols=2)
 
-    figure_path = EXPERIMENT_DIR / "figures" / "aosvsoa_benchmark.png"
+    suffix = f"_{timestamp}" if timestamp else ""
+    figure_path = EXPERIMENT_DIR / "figures" / f"aosvsoa_benchmark{suffix}.png"
     figure_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(figure_path, dpi=200)
-    print(f"Input: {result_dir}")
+    print(f"AoS input: {aos_path}")
+    print(f"SoA input: {soa_path}")
     print(f"Figure written to: {figure_path}")
     if args.show:
         plt.show()

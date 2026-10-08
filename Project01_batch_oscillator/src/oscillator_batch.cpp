@@ -102,13 +102,13 @@ OscillatorAoSBatchWithPayload make_oscillator_aos_batch_with_payload(int number,
         StepCoefficients step_coefficients = system.make_step_coefficients(dt);
 
         OscillatorAoSWithPayload oscillator{.position = r * cos(theta),
-                                 .velocity = r * sin(theta),
-                                 .omega = omega,
-                                 .zeta = zeta,
-                                 .m00 = step_coefficients.m00,
-                                 .m01 = step_coefficients.m01,
-                                 .m10 = step_coefficients.m10,
-                                 .m11 = step_coefficients.m11};
+                                            .velocity = r * sin(theta),
+                                            .omega = omega,
+                                            .zeta = zeta,
+                                            .m00 = step_coefficients.m00,
+                                            .m01 = step_coefficients.m01,
+                                            .m10 = step_coefficients.m10,
+                                            .m11 = step_coefficients.m11};
         aos_batch[i] = oscillator;
     }
     return aos_batch;
@@ -327,6 +327,9 @@ void update_soa_batch(OscillatorSoABatch& soa_batch, int step) {
     }
 
     for (int i = 0; i < step; ++i) {
+        if (soa_batch.active_indices.size() == 0) {
+            break;
+        }
         update_soa_batch_step(soa_batch);
     };
 }
@@ -420,7 +423,7 @@ OscillatorSoABatch_no_termination make_oscillator_soa_batch_no_termination(int n
 // ---- 无终止SOA振子更新 --------------------------------------------------------------
 
 void update_soa_batch_step_no_termination(OscillatorSoABatch_no_termination& soa_batch) {
-    for (std::size_t i = 0; i < soa_batch.omega.size();) {
+    for (std::size_t i = 0; i < soa_batch.omega.size(); ++i) {
         int batch_index = i;
         const double old_position = soa_batch.position[batch_index];
         const double old_velocity = soa_batch.velocity[batch_index];
@@ -428,7 +431,6 @@ void update_soa_batch_step_no_termination(OscillatorSoABatch_no_termination& soa
             soa_batch.m00[batch_index] * old_position + soa_batch.m01[batch_index] * old_velocity;
         soa_batch.velocity[batch_index] =
             soa_batch.m10[batch_index] * old_position + soa_batch.m11[batch_index] * old_velocity;
-        ++i;
     }
 }
 
