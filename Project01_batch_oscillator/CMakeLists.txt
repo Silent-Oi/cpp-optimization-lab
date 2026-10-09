@@ -1,6 +1,7 @@
 add_library(oscillator_core
     src/harmonic_oscillator.cpp
     src/oscillator_batch.cpp
+    src/oscillator_batch_parallel.cpp
     src/time_integrators.cpp
     src/underdamped_oscillator.cpp
 )

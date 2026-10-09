@@ -6,15 +6,21 @@
 #include "test_common.h"
 #include "underdamped_oscillator.h"
 
-namespace oscillator {
+namespace {
+const int number = 16;
+const int step = 16;
+constexpr int seed = 1234;
+constexpr double dt = 0.123;
 
 // 从批量元素保存的初始状态和原始参数构造 M1 标量解析参考。
 // 参考状态直接计算到绝对时间 time，不复用待测的批量更新路径。
-static OscillatorAoS system_to_aos(const OscillatorAoS& oscillator, double time, double dt) {
-    UnderdampedOscillator system(oscillator.omega, oscillator.zeta);
-    State initail_state = {.position = oscillator.position, .velocity = oscillator.velocity};
-    StepCoefficients step_cofficients = system.make_step_coefficients(dt);
-    State final_state = system.exact_state(time, initail_state);
+static oscillator::OscillatorAoS system_to_aos(const oscillator::OscillatorAoS& oscillator,
+                                               double time, double dt) {
+    oscillator::UnderdampedOscillator system(oscillator.omega, oscillator.zeta);
+    oscillator::State initail_state = {.position = oscillator.position,
+                                       .velocity = oscillator.velocity};
+    oscillator::StepCoefficients step_cofficients = system.make_step_coefficients(dt);
+    oscillator::State final_state = system.exact_state(time, initail_state);
 
     return {.position = final_state.position,
             .velocity = final_state.velocity,
@@ -26,7 +32,8 @@ static OscillatorAoS system_to_aos(const OscillatorAoS& oscillator, double time,
             .m11 = step_cofficients.m11};
 }
 
-static OscillatorSoABatch system_to_soa(const OscillatorSoABatch& oscillator, double time, double dt) {
+static oscillator::OscillatorSoABatch system_to_soa(
+    const oscillator::OscillatorSoABatch& oscillator, double time, double dt) {
     std::size_t N = oscillator.omega.size();
 
     std::vector<double> position_batch(N);
@@ -39,11 +46,11 @@ static OscillatorSoABatch system_to_soa(const OscillatorSoABatch& oscillator, do
     std::vector<double> zeta_batch(N);
 
     for (std::size_t i = 0; i < N; ++i) {
-        UnderdampedOscillator system(oscillator.omega[i], oscillator.zeta[i]);
-        State initail_state = {.position = oscillator.position[i],
-                               .velocity = oscillator.velocity[i]};
-        StepCoefficients step_cofficients = system.make_step_coefficients(dt);
-        State final_state = system.exact_state(time, initail_state);
+        oscillator::UnderdampedOscillator system(oscillator.omega[i], oscillator.zeta[i]);
+        oscillator::State initail_state = {.position = oscillator.position[i],
+                                           .velocity = oscillator.velocity[i]};
+        oscillator::StepCoefficients step_cofficients = system.make_step_coefficients(dt);
+        oscillator::State final_state = system.exact_state(time, initail_state);
 
         position_batch[i] = final_state.position;
         velocity_batch[i] = final_state.velocity;
@@ -64,6 +71,10 @@ static OscillatorSoABatch system_to_soa(const OscillatorSoABatch& oscillator, do
             .omega = omega_batch,
             .zeta = zeta_batch};
 }
+
+}  // namespace
+
+namespace oscillator {
 
 void test_batch_number() {
     // 初始化接口应支持调用者指定的任意非负批量规模。
@@ -139,11 +150,12 @@ void test_batch() {
     }
 
     OscillatorSoABatch system_soa = system_to_soa(initial_oscillator_soa_batch, time1, dt);
-    expect_soa_near(oscillator_soa_batch, system_soa, "SoA批量单步计算欠阻尼振子与单一计算精确解比较");
+    expect_soa_near(oscillator_soa_batch, system_soa,
+                    "SoA批量单步计算欠阻尼振子与单一计算精确解比较");
 
     OscillatorSoABatch system_soa1 = system_to_soa(initial_oscillator_soa_batch1, time1, dt);
-    expect_soa_near(oscillator_soa_batch1, system_soa1, "SoA单步计算单个欠阻尼振子与单一计算精确解比较");
-
+    expect_soa_near(oscillator_soa_batch1, system_soa1,
+                    "SoA单步计算单个欠阻尼振子与单一计算精确解比较");
 
     // 再从一步后的状态继续推进，验证连续多步的累计时间语义。
     update_aos_batch(oscillator_aos_batch, step2);
@@ -170,5 +182,49 @@ void test_batch() {
                     "SoA计算单个欠阻尼振子与单一计算精确解比较");
 }
 
+// ============================================================================
+// 多线程测试
+// ============================================================================
+
+// 功能测试
+// ============================================================================
+
+void test_update_soa_batch_no_termination_parallel() {
+    OscillatorSoABatch_no_termination initial_oscillator_batch =
+        make_oscillator_soa_batch_no_termination(number, dt, seed);
+
+    // ---- 单线程更新
+    // --------------------------------------------------------------
+
+    OscillatorSoABatch_no_termination base_oscillator_batch = initial_oscillator_batch;
+    update_soa_batch_no_termination(base_oscillator_batch, step);
+
+    // ---- 多线程更新测试1
+    // --------------------------------------------------------------
+
+    OscillatorSoABatch_no_termination test_oscillator_batch = initial_oscillator_batch;
+    std::size_t thread_count = 1;
+    update_soa_batch_no_termination_parallel(test_oscillator_batch, step, thread_count);
+
+    expect_soa_near(test_oscillator_batch, base_oscillator_batch, "parallel_test1");
+
+    // ---- 多线程更新测试2
+    // --------------------------------------------------------------
+
+    test_oscillator_batch = initial_oscillator_batch;
+    thread_count = 2;
+    update_soa_batch_no_termination_parallel(test_oscillator_batch, step, thread_count);
+
+    expect_soa_near(test_oscillator_batch, base_oscillator_batch, "parallel_test2");
+
+    // ---- 多线程更新测试3
+    // --------------------------------------------------------------
+
+    test_oscillator_batch = initial_oscillator_batch;
+    thread_count = 3;
+    update_soa_batch_no_termination_parallel(test_oscillator_batch, step, thread_count);
+
+    expect_soa_near(test_oscillator_batch, base_oscillator_batch, "parallel_test3");
+}
 
 }  // namespace oscillator

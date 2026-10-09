@@ -40,8 +40,8 @@ void update_aos_batch_with_payload(OscillatorAoSBatchWithPayload& aos_batch, int
 // ---- AOS振子输出相关信息 --------------------------------------------------------------
 
 // 汇总数量、校验值、状态幅值和有限性，供功能/压力运行记录结果。
-BatchResults aos_batch_report(OscillatorAoSBatch& aos_batch_updated);
-BatchResults aos_batch_report(OscillatorAoSBatchWithPayload& aos_batch_updated);
+BatchResults aos_batch_report(const OscillatorAoSBatch& aos_batch_updated);
+BatchResults aos_batch_report(const OscillatorAoSBatchWithPayload& aos_batch_updated);
 
 // ============================================================================
 // SOA振子相关
@@ -70,12 +70,18 @@ OscillatorSoABatch_no_termination make_oscillator_soa_batch_no_termination(int n
 
 void update_soa_batch_step_no_termination(OscillatorSoABatch_no_termination& soa_batch);
 void update_soa_batch_no_termination(OscillatorSoABatch_no_termination& soa_batch, int step);
+void update_soa_batch_step_no_termination(OscillatorSoABatch_no_termination& soa_batch, int begin,
+                                          int end);
+void update_soa_batch_no_termination_range(OscillatorSoABatch_no_termination& soa_batch, int begin,
+                                           int end, int step);
+void update_soa_batch_no_termination_parallel(OscillatorSoABatch_no_termination& soa_batch,
+                                              const int steps, const std::size_t thread_count);
 void update_soa_batch_step_no_termination_scalar(OscillatorSoABatch_no_termination& soa_batch);
 void update_soa_batch_no_termination_scalar(OscillatorSoABatch_no_termination& soa_batch, int step);
 
 // ---- SOA振子输出相关信息 --------------------------------------------------------------
 
-BatchResults soa_batch_report(OscillatorSoABatch& soa_batch_updated);
-BatchResults soa_batch_report(OscillatorSoABatch_no_termination& soa_batch_updated);
+BatchResults soa_batch_report(const OscillatorSoABatch& soa_batch_updated);
+BatchResults soa_batch_report(const OscillatorSoABatch_no_termination& soa_batch_updated);
 
 }  // namespace oscillator

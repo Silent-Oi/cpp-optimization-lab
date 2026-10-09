@@ -23,7 +23,7 @@ namespace fs = std::filesystem;
 
 namespace {
 const int cycle = 7;
-int number = 64;
+int number = 256;
 const int power = 16;
 const int step = 16;
 constexpr int seed = 1234;
@@ -71,7 +71,7 @@ static std::ofstream create_result_csv(const std::string& data, const std::strin
     return csv;
 }
 
-static double calu_average_time(const std::span<double>& time_array) {
+static double calu_average_time(std::span<double> time_array) {
     if (time_array.empty()) {
         throw std::invalid_argument("time_array cannot be empty");
     }
@@ -250,46 +250,15 @@ static void benchmark_soa(const std::string& data, const std::string& experiment
         std::array<double, cycle> ns_records;
         std::vector<benchmark::BenchResults> bench_results(cycle);
 
-        oscillator::OscillatorSoABatch_no_termination working_oscillator_soa_batch{
-            .position = std::vector<double>(N),
-            .velocity = std::vector<double>(N),
-            .m00 = std::vector<double>(N),
-            .m01 = std::vector<double>(N),
-            .m10 = std::vector<double>(N),
-            .m11 = std::vector<double>(N),
-            .omega = std::vector<double>(N),
-            .zeta = std::vector<double>(N),
-        };
+        oscillator::OscillatorSoABatch_no_termination working_oscillator_soa_batch =
+            initial_oscillator_soa_batch;
 
         // ---- 进入AOS更新计算，总共实验次数为 cycle
         // --------------------------------------------------------------
 
         for (int i = 0; i < cycle; ++i) {
             // 每轮从完全相同的输入开始；复制发生在计时区间之外。
-            std::copy(initial_oscillator_soa_batch.position.begin(),
-                      initial_oscillator_soa_batch.position.end(),
-                      working_oscillator_soa_batch.position.begin());
-            std::copy(initial_oscillator_soa_batch.velocity.begin(),
-                      initial_oscillator_soa_batch.velocity.end(),
-                      working_oscillator_soa_batch.velocity.begin());
-            std::copy(initial_oscillator_soa_batch.m00.begin(),
-                      initial_oscillator_soa_batch.m00.end(),
-                      working_oscillator_soa_batch.m00.begin());
-            std::copy(initial_oscillator_soa_batch.m01.begin(),
-                      initial_oscillator_soa_batch.m01.end(),
-                      working_oscillator_soa_batch.m01.begin());
-            std::copy(initial_oscillator_soa_batch.m10.begin(),
-                      initial_oscillator_soa_batch.m10.end(),
-                      working_oscillator_soa_batch.m10.begin());
-            std::copy(initial_oscillator_soa_batch.m11.begin(),
-                      initial_oscillator_soa_batch.m11.end(),
-                      working_oscillator_soa_batch.m11.begin());
-            std::copy(initial_oscillator_soa_batch.omega.begin(),
-                      initial_oscillator_soa_batch.omega.end(),
-                      working_oscillator_soa_batch.omega.begin());
-            std::copy(initial_oscillator_soa_batch.zeta.begin(),
-                      initial_oscillator_soa_batch.zeta.end(),
-                      working_oscillator_soa_batch.zeta.begin());
+            working_oscillator_soa_batch = initial_oscillator_soa_batch;
 
             // 计时区间只包含核心批量更新，不包含初始化、复制、校验和输出。
             const auto start = std::chrono::steady_clock::now();
@@ -606,17 +575,7 @@ static void benchmark_soa(const std::string& data, const std::string& experiment
         std::array<double, cycle> ns_records;
         std::vector<benchmark::BenchResults> bench_results(cycle);
 
-        oscillator::OscillatorSoABatch working_oscillator_soa_batch{
-            .position = std::vector<double>(N),
-            .velocity = std::vector<double>(N),
-            .m00 = std::vector<double>(N),
-            .m01 = std::vector<double>(N),
-            .m10 = std::vector<double>(N),
-            .m11 = std::vector<double>(N),
-            .omega = std::vector<double>(N),
-            .zeta = std::vector<double>(N),
-            .active_indices = std::vector<int>(N),
-        };
+        oscillator::OscillatorSoABatch working_oscillator_soa_batch = initial_oscillator_soa_batch;
 
         // ---- 进入有终止SOA更新计算，总共实验次数为 cycle
         // --------------------------------------------------------------
@@ -715,16 +674,8 @@ static void benchmark_soa_no_termination(const std::string& data,
         std::array<double, cycle> ns_records;
         std::vector<benchmark::BenchResults> bench_results(cycle);
 
-        oscillator::OscillatorSoABatch_no_termination working_oscillator_soa_batch{
-            .position = std::vector<double>(N),
-            .velocity = std::vector<double>(N),
-            .m00 = std::vector<double>(N),
-            .m01 = std::vector<double>(N),
-            .m10 = std::vector<double>(N),
-            .m11 = std::vector<double>(N),
-            .omega = std::vector<double>(N),
-            .zeta = std::vector<double>(N),
-        };
+        oscillator::OscillatorSoABatch_no_termination working_oscillator_soa_batch =
+            initial_oscillator_soa_batch;
 
         // ---- 进入无终止SOA更新计算，总共实验次数为 cycle
         // --------------------------------------------------------------
@@ -830,16 +781,8 @@ static void benchmark_soa(const std::string& data, const std::string& experiment
         std::array<double, cycle> ns_records;
         std::vector<benchmark::BenchResults> bench_results(cycle);
 
-        oscillator::OscillatorSoABatch_no_termination working_oscillator_soa_batch{
-            .position = std::vector<double>(N),
-            .velocity = std::vector<double>(N),
-            .m00 = std::vector<double>(N),
-            .m01 = std::vector<double>(N),
-            .m10 = std::vector<double>(N),
-            .m11 = std::vector<double>(N),
-            .omega = std::vector<double>(N),
-            .zeta = std::vector<double>(N),
-        };
+        oscillator::OscillatorSoABatch_no_termination working_oscillator_soa_batch =
+            initial_oscillator_soa_batch;
 
         // ---- 进入向量化无终止SOA更新计算，总共实验次数为 cycle
         // --------------------------------------------------------------
@@ -940,16 +883,8 @@ static void benchmark_soa_scalar(const std::string& data, const std::string& exp
         std::array<double, cycle> ns_records;
         std::vector<benchmark::BenchResults> bench_results(cycle);
 
-        oscillator::OscillatorSoABatch_no_termination working_oscillator_soa_batch{
-            .position = std::vector<double>(N),
-            .velocity = std::vector<double>(N),
-            .m00 = std::vector<double>(N),
-            .m01 = std::vector<double>(N),
-            .m10 = std::vector<double>(N),
-            .m11 = std::vector<double>(N),
-            .omega = std::vector<double>(N),
-            .zeta = std::vector<double>(N),
-        };
+        oscillator::OscillatorSoABatch_no_termination working_oscillator_soa_batch =
+            initial_oscillator_soa_batch;
 
         // ---- 进入标量无终止SOA更新计算，总共实验次数为 cycle
         // --------------------------------------------------------------

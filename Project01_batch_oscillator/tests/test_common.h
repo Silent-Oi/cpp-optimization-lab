@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+
 #include "state.h"
 
 namespace oscillator {
@@ -12,10 +13,12 @@ void expect_state_near(const State& actual, const State& expected, const std::st
 
 // 逐字段比较 OscillatorAoS 的状态、原始参数和派生系数。
 void expect_aos_near(const OscillatorAoS& actual, const OscillatorAoS& expected,
-                           const std::string& test_name);
+                     const std::string& test_name);
 
 void expect_soa_near(const OscillatorSoABatch& actual, const OscillatorSoABatch& expected,
                      const std::string& test_name);
-
+void expect_soa_near(const OscillatorSoABatch_no_termination& actual,
+                     const OscillatorSoABatch_no_termination& expected,
+                     const std::string& test_name);
 
 }  // namespace oscillator

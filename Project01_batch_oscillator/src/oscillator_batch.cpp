@@ -5,14 +5,22 @@
 #include <numbers>
 #include <random>
 #include <stdexcept>
+#include <thread>
 #include <utility>
 #include <vector>
 
 #include "state.h"
 #include "underdamped_oscillator.h"
 
-namespace oscillator {
+namespace {
 double eps_energy = 1E-12;
+
+static double system_energy(const double& omega, const double& position, const double& velocity) {
+    return 0.5 * velocity * velocity + 0.5 * omega * omega * position * position;
+}
+}  // namespace
+
+namespace oscillator {
 
 // ============================================================================
 // AOS振子相关
@@ -141,7 +149,7 @@ void update_aos_batch_with_payload(OscillatorAoSBatchWithPayload& aos_batch, int
 
 // ---- AOS振子输出相关信息 --------------------------------------------------------------
 
-BatchResults aos_batch_report(OscillatorAoSBatch& aos_batch_updated) {
+BatchResults aos_batch_report(const OscillatorAoSBatch& aos_batch_updated) {
     std::size_t N = aos_batch_updated.size();
     double state_checksum = 0.0;
     double max_abs_x = 0.0;
@@ -170,7 +178,7 @@ BatchResults aos_batch_report(OscillatorAoSBatch& aos_batch_updated) {
             .finite = finite};
 }
 
-BatchResults aos_batch_report(OscillatorAoSBatchWithPayload& aos_batch_updated) {
+BatchResults aos_batch_report(const OscillatorAoSBatchWithPayload& aos_batch_updated) {
     std::size_t N = aos_batch_updated.size();
     double state_checksum = 0.0;
     double max_abs_x = 0.0;
@@ -294,10 +302,6 @@ OscillatorSoABatch make_oscillator_soa_batch(int number, double dt, int seed, do
 }
 
 // ---- 带终止的SOA振子更新 --------------------------------------------------------------
-
-double system_energy(const double& omega, const double& position, const double& velocity) {
-    return 0.5 * velocity * velocity + 0.5 * omega * omega * position * position;
-}
 
 void update_soa_batch_step(OscillatorSoABatch& soa_batch) {
     for (std::size_t i = 0; i < soa_batch.active_indices.size();) {
@@ -435,18 +439,9 @@ void update_soa_batch_step_no_termination(OscillatorSoABatch_no_termination& soa
     }
 }
 
-void update_soa_batch_no_termination(OscillatorSoABatch_no_termination& soa_batch, int step) {
-    if (step < 0) {
-        throw std::invalid_argument("step must be non-negative");
-    }
-
-    for (int i = 0; i < step; ++i) {
-        update_soa_batch_step_no_termination(soa_batch);
-    };
-}
-
-void update_soa_batch_step_no_termination_scalar(OscillatorSoABatch_no_termination& soa_batch) {
-    for (std::size_t i = 0; i < soa_batch.omega.size(); ++i) {
+void update_soa_batch_step_no_termination(OscillatorSoABatch_no_termination& soa_batch, int begin,
+                                          int end) {
+    for (std::size_t i = begin; i < end; ++i) {
         std::size_t batch_index = i;
         const double old_position = soa_batch.position[batch_index];
         const double old_velocity = soa_batch.velocity[batch_index];
@@ -457,7 +452,96 @@ void update_soa_batch_step_no_termination_scalar(OscillatorSoABatch_no_terminati
     }
 }
 
-void update_soa_batch_no_termination_scalar(OscillatorSoABatch_no_termination& soa_batch, int step) {
+void update_soa_batch_no_termination(OscillatorSoABatch_no_termination& soa_batch, int step) {
+    if (step < 0) {
+        throw std::invalid_argument("step must be non-negative");
+    }
+
+    for (int i = 0; i < step; ++i) {
+        update_soa_batch_step_no_termination(soa_batch);
+    };
+}
+
+void update_soa_batch_no_termination_range(OscillatorSoABatch_no_termination& soa_batch, int begin,
+                                           int end, int step) {
+    if (step < 0) {
+        throw std::invalid_argument("step must be non-negative");
+    }
+
+    if (begin < 0 || end < 0) {
+        throw std::invalid_argument("index must be non-negative");
+    }
+
+    if (begin > end) {
+        throw std::invalid_argument("begin must < end");
+    }
+
+    int number_oscillator = soa_batch.omega.size();
+
+    if (end > number_oscillator) {
+        throw std::invalid_argument("end must <= number of oscillator");
+    }
+
+    for (int i = 0; i < step; ++i) {
+        update_soa_batch_step_no_termination(soa_batch, begin, end);
+    };
+}
+
+void update_soa_batch_no_termination_parallel(OscillatorSoABatch_no_termination& soa_batch,
+                                              const int steps, const std::size_t thread_count) {
+    if (steps < 0) {
+        throw std::invalid_argument("step must be non-negative");
+    }
+
+    if (thread_count <= 0) {
+        throw std::invalid_argument("thread_cout must be positive");
+    }
+
+    const std::size_t number_batch = soa_batch.omega.size();
+    const std::size_t number_range = number_batch / thread_count;
+
+    std::vector<std::jthread> workers;
+
+    for (std::size_t i = 1; i < thread_count - 1; ++i) {
+        const std::size_t begin = number_range * i;
+        const std::size_t end = begin + number_range;
+        const std::size_t worker_index = i - 1;
+        workers.emplace_back([&soa_batch, begin, end, steps] {
+            update_soa_batch_no_termination_range(soa_batch, begin, end, steps);
+        });
+    }
+    if (thread_count > 1) {
+        const std::size_t last_begin = number_range * (thread_count - 1);
+        const std::size_t last_end = number_batch;
+        workers.emplace_back([&soa_batch, last_begin, last_end, steps] {
+            update_soa_batch_no_termination_range(soa_batch, last_begin, last_end, steps);
+        });
+    }
+
+    update_soa_batch_no_termination_range(soa_batch, 0, number_range, steps);
+
+    for (std::size_t i = 0; i < thread_count - 1; ++i) {
+        workers[i].join();
+    }
+}
+
+void update_soa_batch_step_no_termination_scalar(OscillatorSoABatch_no_termination& soa_batch) {
+    const std::size_t count = soa_batch.omega.size();
+
+#pragma loop(no_vector)
+    for (std::size_t i = 0; i < count; ++i) {
+        std::size_t batch_index = i;
+        const double old_position = soa_batch.position[batch_index];
+        const double old_velocity = soa_batch.velocity[batch_index];
+        soa_batch.position[batch_index] =
+            soa_batch.m00[batch_index] * old_position + soa_batch.m01[batch_index] * old_velocity;
+        soa_batch.velocity[batch_index] =
+            soa_batch.m10[batch_index] * old_position + soa_batch.m11[batch_index] * old_velocity;
+    }
+}
+
+void update_soa_batch_no_termination_scalar(OscillatorSoABatch_no_termination& soa_batch,
+                                            int step) {
     if (step < 0) {
         throw std::invalid_argument("step must be non-negative");
     }
@@ -469,7 +553,7 @@ void update_soa_batch_no_termination_scalar(OscillatorSoABatch_no_termination& s
 
 // ---- SOA振子输出相关信息 --------------------------------------------------------------
 
-BatchResults soa_batch_report(OscillatorSoABatch& soa_batch_updated) {
+BatchResults soa_batch_report(const OscillatorSoABatch& soa_batch_updated) {
     std::size_t N = soa_batch_updated.omega.size();
     double state_checksum = 0.0;
     double max_abs_x = 0.0;
@@ -499,7 +583,7 @@ BatchResults soa_batch_report(OscillatorSoABatch& soa_batch_updated) {
             .finite = finite};
 }
 
-BatchResults soa_batch_report(OscillatorSoABatch_no_termination& soa_batch_updated) {
+BatchResults soa_batch_report(const OscillatorSoABatch_no_termination& soa_batch_updated) {
     std::size_t N = soa_batch_updated.omega.size();
     double state_checksum = 0.0;
     double max_abs_x = 0.0;
