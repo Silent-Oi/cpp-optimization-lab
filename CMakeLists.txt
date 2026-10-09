@@ -13,3 +13,4 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_subdirectory(Project00_common)
 add_subdirectory(Project01_batch_oscillator)
+add_subdirectory(Project02_heat_equation)

@@ -19,7 +19,7 @@
 
 批量计算大量参数不同的欠阻尼振子，包含 AoS/SoA、自动向量化、简单多线程、五组性能实验和相空间显示。已于 2026-10-09 正式结束，详见[项目评价与已知局限](Project01_batch_oscillator/docs/project_evaluation.md)。
 
-下一项目为 [Project02 — CPU/CUDA Heat Equation](Project02_heat_equation/README.md)，目前处于规划阶段。先实现并验证 CPU 热扩散模拟，再引入 CUDA；CUDA 不属于当前 Project01 的构建依赖。
+当前推进 [Project02 — CPU/CUDA Heat Equation](Project02_heat_equation/README.md)，已初始化项目骨架，进入物理模型与 CPU 参考实现阶段。先实现并验证 CPU 热扩散模拟，再引入 CUDA；当前构建无需 CUDA Toolkit。
 
 ## 技术路线
 
@@ -31,7 +31,7 @@
 cpp-optimization-lab/
 ├─ Project00_common/             # 公共组件入口
 ├─ Project01_batch_oscillator/   # 欠阻尼振子
-├─ Project02_heat_equation/     # CPU/CUDA 热扩散（规划中）
+├─ Project02_heat_equation/     # CPU/CUDA 热扩散（第一阶段）
 ├─ docs/
 │  └─ roadmap.md                 # 总体技术路线
 ├─ CMakeLists.txt
