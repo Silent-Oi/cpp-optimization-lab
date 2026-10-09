@@ -1,5 +1,6 @@
 #include "oscillator_batch.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <numbers>
@@ -498,30 +499,40 @@ void update_soa_batch_no_termination_parallel(OscillatorSoABatch_no_termination&
     }
 
     const std::size_t number_batch = soa_batch.omega.size();
-    const std::size_t number_range = number_batch / thread_count;
+
+    const std::size_t thread_require = std::min(number_batch, thread_count);
+    if (thread_require == 0) {
+        return;
+    }
+
+    std::size_t number_range = number_batch / thread_require;
+    const std::size_t remainder = number_batch % thread_require;
+    std::size_t number_range_remainder = number_range + 1;
 
     std::vector<std::jthread> workers;
 
-    for (std::size_t i = 1; i < thread_count - 1; ++i) {
-        const std::size_t begin = number_range * i;
-        const std::size_t end = begin + number_range;
+    std::size_t begin_index = number_range;
+    std::size_t end_index;
+
+    for (std::size_t i = 1; i < thread_require; ++i) {
+        if (i <= remainder) {
+            end_index = begin_index + number_range_remainder;
+        } else {
+            end_index = begin_index + number_range;
+        }
+
         const std::size_t worker_index = i - 1;
-        workers.emplace_back([&soa_batch, begin, end, steps] {
-            update_soa_batch_no_termination_range(soa_batch, begin, end, steps);
+        workers.emplace_back([&soa_batch, begin_index, end_index, steps] {
+            update_soa_batch_no_termination_range(soa_batch, begin_index, end_index, steps);
         });
-    }
-    if (thread_count > 1) {
-        const std::size_t last_begin = number_range * (thread_count - 1);
-        const std::size_t last_end = number_batch;
-        workers.emplace_back([&soa_batch, last_begin, last_end, steps] {
-            update_soa_batch_no_termination_range(soa_batch, last_begin, last_end, steps);
-        });
+
+        begin_index = end_index;
     }
 
     update_soa_batch_no_termination_range(soa_batch, 0, number_range, steps);
 
-    for (std::size_t i = 0; i < thread_count - 1; ++i) {
-        workers[i].join();
+    for (auto& worker : workers) {
+        worker.join();
     }
 }
 
