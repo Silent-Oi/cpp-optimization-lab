@@ -82,6 +82,20 @@ python Project01_batch_oscillator/benchmarks/scripts/plot_vectorization_experime
 横轴为振子数量（以 2 为底的对数刻度），纵轴为每振子每步耗时。蓝色表示 SoA 默认路径，橙色表示 SoA scalar 路径，实线表示平均值，虚线表示中位数。脚本检查两组数据的 N、步数是否匹配，并要求更新步数固定。
 曲线名称对应 benchmark 调用入口；是否实际生成向量指令或保持标量执行，需要结合编译器诊断或汇编确认，CSV 和绘图脚本不验证这一点。
 
+### 多线程实验绘图
+
+在仓库根目录运行：
+
+```powershell
+python Project01_batch_oscillator/benchmarks/scripts/plot_parallel_experiment.py
+```
+
+脚本从 `parallel_experiment/results/` 选择时间标识最新的完整 `soa_benchmark`、`soa_parallel_benchmark` 配对，支持 `.csv<时间标识>` 和 `_<时间标识>.csv` 两种命名方式。图片保存到 `parallel_experiment/figures/parallel_benchmark_<时间标识>.png`。
+同样支持 `--timestamp YYYYMMDD_HHMMSS` 和 `--show`；更新的结果不完整时提示并使用上一组完整结果。没有带时间标识的文件时，读取 `soa_benchmark.csv`、`soa_parallel_benchmark.csv`。
+
+横轴为振子数量（以 2 为底的对数刻度），纵轴为每振子每步耗时。蓝色表示单线程 SoA，橙色表示多线程 SoA，实线表示平均值，虚线表示中位数。脚本检查两组数据的 N、步数是否匹配，并要求更新步数固定。
+多线程 CSV 的 `threads` 列用于标注图例，例如 `SoA parallel (3 threads)`，并要求同一份 CSV 的线程数为正整数且固定。单线程文件可省略该列；包含时必须为 1。历史多线程 CSV 没有 `threads` 列时仍可绘制，图例保留通用名称，不推断线程数量。比较不同运行时需另外核对构建配置和硬件条件。
+
 ## 后续实验与结果保存
 
 - AoS 大小实验比较普通结构体和带额外字段的结构体，保持更新公式和输入一致；本轮不加入 packed 布局或专门的非对齐访问实验。

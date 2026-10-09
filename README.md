@@ -17,7 +17,7 @@
 
 ### [Project01 — Batch Oscillator](Project01_batch_oscillator/README.md)
 
-批量计算大量参数不同的欠阻尼振子。
+批量计算大量参数不同的欠阻尼振子，包含 AoS/SoA、自动向量化、简单多线程、五组性能实验和相空间显示。已于 2026-10-09 正式结束，详见[项目评价与已知局限](Project01_batch_oscillator/docs/project_evaluation.md)。
 
 下一项目为 [Project02 — CPU/CUDA Heat Equation](Project02_heat_equation/README.md)，目前处于规划阶段。先实现并验证 CPU 热扩散模拟，再引入 CUDA；CUDA 不属于当前 Project01 的构建依赖。
 
