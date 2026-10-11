@@ -37,7 +37,7 @@ Project02_heat_equation/
 └─ README.md
 ```
 
-目前上述实现目录只有占位文件，尚无计算程序、测试程序或 CUDA kernel。
+CPU 核心的源文件与头文件已接入构建，目前内容为空，尚无计算程序、测试程序或 CUDA kernel。
 
 ## 构建
 
@@ -49,7 +49,7 @@ Windows / MSVC x64 环境下，从仓库根目录执行：
 cmd.exe /d /c 'call "D:\Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat" && cmake -S . -B build\x64-Release -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build\x64-Release'
 ```
 
-当前 `heat_core` 是 `INTERFACE` target，仅提供头文件路径、C++20 公共依赖与 MSVC UTF-8 选项，不产生库文件或可执行程序，也不是可单独构建的编译目标。第一份 CPU 实现加入时，再将其转为编译型库并添加示例入口。CUDA 配置在第四阶段接入。
+当前 `heat_core` 是静态库 target，编译 `src/heat_diffusion.cpp`，可通过 `cmake --build build/x64-Release --target heat_core` 单独构建。它仅使用本项目与 `Project00_common` 的头文件路径，不依赖 Project01。后续随 CPU 实现添加示例入口；CUDA 配置在第四阶段接入。
 
 ## 完成后的能力
 

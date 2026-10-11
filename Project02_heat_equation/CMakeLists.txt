@@ -1,14 +1,16 @@
-# Expose headers until the first CPU implementation is added.
-add_library(heat_core INTERFACE)
+add_library(heat_core STATIC
+    src/heat_diffusion.cpp
+)
 
-target_include_directories(heat_core INTERFACE
+target_include_directories(heat_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
-target_link_libraries(heat_core INTERFACE cpp_lab_common)
+target_link_libraries(heat_core PUBLIC cpp_lab_common)
 
 if(MSVC)
-    target_compile_options(heat_core INTERFACE /utf-8)
+  target_compile_options(heat_core PRIVATE /Qvec-report:2 /FAsu)
+    target_compile_options(heat_core PRIVATE /utf-8)
 endif()
 
-# Add compiled sources and executable targets with the CPU implementation.
+# Add executable targets with the CPU implementation.
 # CUDA is introduced in stage 4; configuring the CPU workspace needs no toolkit.
