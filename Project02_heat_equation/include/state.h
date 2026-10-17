@@ -15,6 +15,8 @@ enum class InitialField { Uniform, SineMode };
 
 struct TemperatureGrid {
     Grid2D grid;
+    double rx;
+    double ry;
     // index = y*nx + x; [0, nx*ny)
     std::vector<double> temperature;
 };

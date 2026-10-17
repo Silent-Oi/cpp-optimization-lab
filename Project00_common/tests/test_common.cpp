@@ -1,14 +1,9 @@
 #include <cstdlib>
 #include <stdexcept>
-namespace {
-
-const double tolerance = 1e-4;
-
-}
 
 namespace common {
 
-void expect_near(double actual, double expected) {
+void expect_near(double actual, double expected, double tolerance) {
     if (std::abs(actual - expected) <= tolerance) {
         return;
     }

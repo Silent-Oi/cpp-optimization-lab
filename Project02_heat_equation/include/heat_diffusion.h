@@ -6,8 +6,9 @@ namespace heat_diffusion {
 
 // ---- 创建温度场 --------------------------------------------------------------
 
-TemperatureGrid make_temperature_grid(const Grid2D& grid, InitialField field,
-                                      double initial_temperature);
+TemperatureGrid make_temperature_grid(const Grid2D& grid, InitialField initial_field_type,
+                                      double initial_temperature, double thermal_diffusivity,
+                                      double dt);
 
 // ============================================================================
 // 中心差分解
@@ -15,8 +16,8 @@ TemperatureGrid make_temperature_grid(const Grid2D& grid, InitialField field,
 
 namespace numerical {
 
-void solve_step(TemperatureGrid& temperature_field, double thermal_diffusivity, double dt);
-void solve(TemperatureGrid& temperature_field, double thermal_diffusivity, double steps, double dt);
+void solve_step(TemperatureGrid& temperature_field, std::vector<double>& temperature_cache);
+void solve(TemperatureGrid& temperature_field, int steps);
 
 }  // namespace numerical
 
