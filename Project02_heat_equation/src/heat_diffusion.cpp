@@ -3,6 +3,7 @@
 #include <cmath>
 #include <numbers>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 #include "state.h"
@@ -21,24 +22,21 @@ static heat_diffusion::TemperatureGrid initialize_uniform_temperature(
 
     double rx = thermal_diffusivity * dt / (grid.dx * grid.dx);
     double ry = thermal_diffusivity * dt / (grid.dy * grid.dy);
+    double rc = 1 - 2 * rx - 2 * ry;
 
-    for (std::size_t j = 0; j < number_y; ++j) {
-        for (std::size_t i = 0; i < number_x; ++i) {
-            double x = i * grid.dx;
-            double y = j * grid.dy;
-            std::size_t index = j * grid.nx + i;
-
-            if (j == 0 || i == 0 || j == number_y - 1 || i == number_x - 1) {
-                temperature[index] = 0;
-                continue;
-            }
-        }
+    for (std::size_t i = 0; i < number_x; ++i) {
+        temperature[i] = 0;
+        temperature[(number_y - 1) * number_x + i] = 0;
     }
+
+    for (std::size_t j = 1; j < number_y - 1; ++j) {
+        const std::size_t row = j * number_x;
+        temperature[row] = 0;
+        temperature[row + number_x - 1] = 0;
+    }
+
     return {
-        grid,
-        rx,
-        ry,
-        temperature,
+        grid, rx, ry, rc, std::move(temperature), std::vector<double>(node_count),
     };
 }
 
@@ -54,6 +52,7 @@ static heat_diffusion::TemperatureGrid initialize_SineMode_temperature(
 
     double rx = thermal_diffusivity * dt / (grid.dx * grid.dx);
     double ry = thermal_diffusivity * dt / (grid.dy * grid.dy);
+    double rc = 1 - 2 * rx - 2 * ry;
 
     auto sine_mode_temperature = [&grid, initial_temperature](const double x, const double y) {
         return initial_temperature * std::sin(std::numbers::pi * x / (grid.dx * (grid.nx - 1))) *
@@ -74,10 +73,7 @@ static heat_diffusion::TemperatureGrid initialize_SineMode_temperature(
         }
     }
     return {
-        grid,
-        rx,
-        ry,
-        temperature,
+        grid, rx, ry, rc, std::move(temperature), std::vector<double>(node_count),
     };
 }
 
@@ -120,29 +116,34 @@ TemperatureGrid make_temperature_grid(const Grid2D& grid, InitialField initial_f
 
 namespace numerical {
 
-void solve_step(TemperatureGrid& temperature_field, std::vector<double>& temperature_cache) {
+void solve_step(TemperatureGrid& temperature_field) {
     const std::size_t number_y = temperature_field.grid.ny;
     const std::size_t number_x = temperature_field.grid.nx;
+
+    const double rx = temperature_field.rx;
+    const double ry = temperature_field.ry;
+    const double rc = temperature_field.rc;
+
+    const double* __restrict old_temperature = temperature_field.temperature.data();
+    double* __restrict new_temperature = temperature_field.temperature_cache.data();
 
     for (std::size_t j = 1; j < number_y - 1; ++j) {
         for (std::size_t i = 1; i < number_x - 1; ++i) {
             std::size_t index = j * number_x + i;
 
-            double orign_temperature = temperature_field.temperature[index];
-            double left_temperature = temperature_field.temperature[index - 1];
-            double right_temperature = temperature_field.temperature[index + 1];
-            double down_temperature = temperature_field.temperature[index - number_x];
-            double up_temperature = temperature_field.temperature[index + number_x];
+            double orign_temperature = old_temperature[index];
+            double left_temperature = old_temperature[index - 1];
+            double right_temperature = old_temperature[index + 1];
+            double down_temperature = old_temperature[index - number_x];
+            double up_temperature = old_temperature[index + number_x];
 
-            temperature_cache[index] =
-                orign_temperature +
-                temperature_field.rx *
-                    (right_temperature + left_temperature - 2 * orign_temperature) +
-                temperature_field.ry * (up_temperature + down_temperature - 2 * orign_temperature);
+            new_temperature[index] = rc * orign_temperature +
+                                     rx * (right_temperature + left_temperature) +
+                                     ry * (up_temperature + down_temperature);
         }
     }
 
-    temperature_field.temperature.swap(temperature_cache);
+    temperature_field.temperature.swap(temperature_field.temperature_cache);
 }
 
 void solve(TemperatureGrid& temperature_field, int steps) {
@@ -150,11 +151,8 @@ void solve(TemperatureGrid& temperature_field, int steps) {
         throw std::invalid_argument("step must be non-negative");
     }
 
-    std::size_t node_count = temperature_field.grid.nx * temperature_field.grid.ny;
-    std::vector<double> temperature_cache(node_count);
-
     for (std::size_t i = 0; i < steps; ++i) {
-        solve_step(temperature_field, temperature_cache);
+        solve_step(temperature_field);
     }
 }
 
@@ -169,6 +167,7 @@ namespace analytical {
 void solve(TemperatureGrid& temperature_field, double thermal_diffusivity, double time) {
     std::size_t number_y = temperature_field.grid.ny;
     std::size_t number_x = temperature_field.grid.nx;
+    std::size_t node_count = number_y * number_x;
     double length_x = temperature_field.grid.dx * (temperature_field.grid.nx - 1);
     double length_y = temperature_field.grid.dy * (temperature_field.grid.ny - 1);
 
@@ -176,12 +175,8 @@ void solve(TemperatureGrid& temperature_field, double thermal_diffusivity, doubl
                     (1 / (length_x * length_x) + 1 / (length_y * length_y));
     double diffusivity = std::exp(-1 * lambda * time);
 
-    for (std::size_t j = 0; j < number_y; ++j) {
-        for (std::size_t i = 0; i < number_x; ++i) {
-            std::size_t index = j * temperature_field.grid.nx + i;
-            temperature_field.temperature[index] =
-                diffusivity * temperature_field.temperature[index];
-        }
+    for (std::size_t i = 0; i < node_count; ++i) {
+        temperature_field.temperature[i] = diffusivity * temperature_field.temperature[i];
     }
 }
 

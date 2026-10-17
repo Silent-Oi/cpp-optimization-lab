@@ -16,7 +16,7 @@ TemperatureGrid make_temperature_grid(const Grid2D& grid, InitialField initial_f
 
 namespace numerical {
 
-void solve_step(TemperatureGrid& temperature_field, std::vector<double>& temperature_cache);
+void solve_step(TemperatureGrid& temperature_field);
 void solve(TemperatureGrid& temperature_field, int steps);
 
 }  // namespace numerical
