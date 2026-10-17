@@ -4,7 +4,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
-
+#include <cstdlib>
 
 
 namespace oscillator {

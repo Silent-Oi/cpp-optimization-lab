@@ -1,12 +1,14 @@
-# Project00 currently exposes only the common include directory.
-# Source files and compiled targets can be added when they are actually needed.
-
-add_library(cpp_lab_common INTERFACE)
+add_library(cpp_lab_common STATIC
+    tests/test_common.cpp
+ "tests/test_common.h")
 
 target_include_directories(
     cpp_lab_common
-    INTERFACE
+    PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests
 )
 
-target_compile_features(cpp_lab_common INTERFACE cxx_std_20)
+if(MSVC)
+    target_compile_options(cpp_lab_common PRIVATE /utf-8)
+endif()
