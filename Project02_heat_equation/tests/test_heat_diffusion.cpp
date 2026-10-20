@@ -10,8 +10,8 @@ const std::size_t nx = 128;
 const std::size_t ny = 128;
 const double length_x = 1;
 const double length_y = 1;
-const double dx = length_x / nx;
-const double dy = length_y / ny;
+const double dx = length_x / (nx-1);
+const double dy = length_y / (ny-1);
 
 heat_diffusion::Grid2D test_gird{
     nx,

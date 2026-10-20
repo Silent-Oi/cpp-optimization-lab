@@ -2,7 +2,7 @@
 
 > Two-dimensional heat diffusion, numerical verification, and CPU/GPU execution.
 
-**状态：CPU 五点差分单步/多步更新及单正弦模态解析参考已实现，仍处于第一阶段的基础单线程实现整理。第二阶段将开展误差实验、数据访问理论分析与多线程对比。**
+**状态：第一阶段已完成，CPU 五点差分单步/多步更新及单正弦模态解析参考已实现。当前进入第二阶段，开展实验程序设计、数值误差与成本分析，以及多线程对比。**
 
 ## 项目成果
 
@@ -16,7 +16,7 @@
 
 六个阶段、完成边界和设计原则见 [技术路线](docs/roadmap.md)。
 
-当前完善单线程求解器的状态管理、时间层存储、计算与数据访问组织，并检查编译器生成代码。第二阶段分析离散误差、工作集与数据复用，实现并评估多线程推进。随后加入温度场显示和 CUDA 后端；当前构建无需 CUDA Toolkit。
+当前从单个误差实验用例开始组织配置、运行、结果与参数扫描，建立从单点更新到完整求解的工作量和数据流量模型，再实现并评估多线程推进。第二阶段同时关注实验代码的可复用性，以及计时前的成本预测和实测解释。随后加入温度场显示和 CUDA 后端；当前构建无需 CUDA Toolkit。
 
 ## 项目结构
 
@@ -50,6 +50,8 @@ cmd.exe /d /c 'call "D:\Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.b
 ```
 
 当前 `heat_core` 是静态库 target，编译 `src/heat_diffusion.cpp`，可通过 `cmake --build build/x64-Release --target heat_core` 单独构建；`heat_tests` 用于当前数值对照。它们使用本项目与 `Project00_common` 的头文件路径，不依赖 Project01。后续添加示例入口；CUDA 配置在第四阶段接入。
+
+误差实验的绘图命令与输出说明见 [数值实验](benchmarks/README.md)。
 
 ## 完成后的能力
 

@@ -31,7 +31,7 @@
 cpp-optimization-lab/
 ├─ Project00_common/             # 公共组件入口
 ├─ Project01_batch_oscillator/   # 欠阻尼振子
-├─ Project02_heat_equation/     # CPU/CUDA 热扩散（第一阶段）
+├─ Project02_heat_equation/     # CPU/CUDA 热扩散（第二阶段）
 ├─ docs/
 │  └─ roadmap.md                 # 总体技术路线
 ├─ CMakeLists.txt
