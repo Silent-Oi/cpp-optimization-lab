@@ -1,0 +1,4 @@
+// String macros used by Visual Studio's code browsing parser.
+// CMake supplies the actual project paths when compiling.
+#define PROJECT01_SOURCE_DIR ""
+#define PROJECT02_SOURCE_DIR ""
