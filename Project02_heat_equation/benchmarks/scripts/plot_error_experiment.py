@@ -1,4 +1,4 @@
-"""Plot MAE/RMSE for a named step scan or grid-refinement experiment."""
+"""Plot MAE/RMSE for a named step, grid, or time-step scan."""
 
 import argparse
 import csv
@@ -12,7 +12,10 @@ import matplotlib
 
 EXPERIMENT_DIR = Path(__file__).resolve().parent.parent / "error_experiment"
 # Change this filename prefix to select the default experiment (no timestamp).
-DEFAULT_EXPERIMENT = "grid_refinement_experiment"
+DEFAULT_EXPERIMENT = "time_step_refinement_experiment"
+# Physical side lengths for nx/ny CSVs; both endpoints are grid nodes.
+DOMAIN_LENGTH_X = 1.0
+DOMAIN_LENGTH_Y = 1.0
 
 
 def select_result(result_dir, experiment, requested_timestamp=None):
@@ -100,8 +103,38 @@ def read_results(path):
     return rows, skipped
 
 
+def format_range(values):
+    low, high = min(values), max(values)
+    return f"{low:.6g}" if low == high else f"{low:.6g}..{high:.6g}"
+
+
+def stability_details(rows):
+    """Use recorded spacings or endpoint-node spacing on the configured domain."""
+    if not all(math.isfinite(value) and value > 0
+               for value in (DOMAIN_LENGTH_X, DOMAIN_LENGTH_Y)):
+        raise ValueError("Domain lengths must be finite and positive")
+    limits, sums = [], []
+    for row in rows:
+        if "dx" in row:
+            dx, dy = row["dx"], row["dy"]
+        else:
+            dx = DOMAIN_LENGTH_X / (row["nx"] - 1)
+            dy = DOMAIN_LENGTH_Y / (row["ny"] - 1)
+        rate = row["thermal_diffusivity"] * (1 / dx**2 + 1 / dy**2)
+        limit, stability_sum = 0.5 / rate, row["dt"] * rate
+        if not all(math.isfinite(value) and value > 0
+                   for value in (rate, limit, stability_sum)):
+            raise ValueError("Invalid stability coefficients")
+        limits.append(limit)
+        sums.append(stability_sum)
+    domain = ("recorded dx/dy" if "dx" in rows[0]
+              else f"Lx={DOMAIN_LENGTH_X:g}, Ly={DOMAIN_LENGTH_Y:g}")
+    return (f"{domain} | dt limit={format_range(limits)}"
+            f" | rx+ry={format_range(sums)} (limit 0.5)")
+
+
 def describe_plot(rows):
-    """Select the scanned variable and reject mixed grid/time parameter scans."""
+    """Select the scanned variable and describe the physical-time comparison."""
     first = rows[0]
     grid_fields = ("dx", "dy") if "dx" in first else ("nx", "ny")
     parameters = (*grid_fields, "thermal_diffusivity", "dt", "steps")
@@ -109,15 +142,7 @@ def describe_plot(rows):
     if varied <= {"steps"}:
         x_key, x_label = "steps", "Update steps"
         details = f"dt={first['dt']:g} | alpha={first['thermal_diffusivity']:g}"
-        if "dx" in first:
-            rate = first["thermal_diffusivity"] * (1 / first["dx"]**2 + 1 / first["dy"]**2)
-            dt_limit, stability_sum = 0.5 / rate, first["dt"] * rate
-            if not all(math.isfinite(value) and value > 0
-                       for value in (rate, dt_limit, stability_sum)):
-                raise ValueError("Invalid stability coefficients")
-            details += (f" | dt limit (from CSV)={dt_limit:.6g}"
-                        f"\nrx+ry={stability_sum:.6g} (limit 0.5)")
-        else:
+        if "nx" in first:
             details += f" | grid={first['nx']} x {first['ny']}"
     elif varied <= set(grid_fields):
         x_key = next(name for name in grid_fields if name in varied)
@@ -132,11 +157,30 @@ def describe_plot(rows):
             raise ValueError("Non-finite final physical time")
         details = (f"dt={first['dt']:g} | steps={first['steps']} | final t={time:g}"
                    f" | alpha={first['thermal_diffusivity']:g}")
+    elif "dt" in varied and varied <= {"dt", "steps"}:
+        x_key, x_label = "dt", "Time step dt"
+        times = [row["dt"] * row["steps"] for row in rows]
+        if not all(math.isfinite(time) and time > 0 for time in times):
+            raise ValueError("Final physical times must be finite and positive")
+        fixed_time = all(math.isclose(time, times[0], rel_tol=1e-8, abs_tol=1e-14)
+                         for time in times)
+        if "steps" in varied and not fixed_time:
+            raise ValueError("When dt and steps both change, dt * steps must stay fixed")
+        if fixed_time:
+            details = f"final t={times[0]:.6g} (fixed) | steps={format_range([r['steps'] for r in rows])}"
+        else:
+            details = (f"steps={first['steps']} (fixed)"
+                       f" | final t={format_range(times)} (varies)")
+            print("Note: dt varies with fixed steps, so final physical time varies; "
+                  "this is not a fixed-final-time convergence comparison.", file=sys.stderr)
+        if "nx" in first:
+            details += f" | grid={first['nx']} x {first['ny']}"
     else:
         raise ValueError(f"Unsupported simultaneous parameter changes: {sorted(varied)}; "
-                         "scan steps with a fixed grid, or refine the grid with fixed dt and steps")
+                         "scan steps, refine the grid at fixed dt/steps, or scan dt at a fixed grid")
     if len({row[x_key] for row in rows}) != len(rows):
         raise ValueError(f"Expected one measurement per {x_key}")
+    details += f"\n{stability_details(rows)}"
     return sorted(rows, key=lambda row: row[x_key]), x_key, x_label, details
 
 

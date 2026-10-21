@@ -34,7 +34,7 @@ heat_diffusion::Grid2D default_grid{
 
 // 默认设置时间步 dt <= 0.09537
 HeatDiffusionConfig default_config{
-    default_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 1, 9, 0.01,
+    default_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 64, 9, 0.01,
 };
 
 enum class ExperimentType { UnstableTimeStep, GridRefinement, TimeStepRefinement };
@@ -98,6 +98,10 @@ HeatDiffusionConfig grid_refinement_config{
     grid_refinement_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 64, 9, 0.001,
 };
 
+HeatDiffusionConfig time_step_refinement_config{
+    default_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 64, 9, 0.05,
+};
+
 static ErrorMetrics benchmark(const int steps, const double dt, const double thermal_diffusivity,
                               const heat_diffusion::TemperatureGrid& initial_temperature_field) {
     double time = dt * steps;
@@ -111,36 +115,50 @@ static ErrorMetrics benchmark(const int steps, const double dt, const double the
     return compute_error_metrics(analytical_temperature_field, numerical_temperature_field);
 }
 
-static ErrorMetrics run_mode(HeatDiffusionConfig& experience_config,
+static ErrorMetrics run_mode(HeatDiffusionConfig& benchmark_config,
                              const ExperimentType& experiment_type,
                              heat_diffusion::TemperatureGrid& initial_temperature_field,
                              std::ofstream& csv) {
     switch (experiment_type) {
         case ExperimentType::UnstableTimeStep: {
-            experience_config.steps = experience_config.steps * 2;
-            std::cout << std::setprecision(10) << "steps: " << experience_config.steps << '\n';
+            benchmark_config.steps = benchmark_config.steps * 2;
+            std::cout << "steps: " << benchmark_config.steps << '\n';
 
-            csv << ' ' << ',' << ' ' << ',' << ' ' << ',' << ' ' << ',' << experience_config.steps
+            csv << ' ' << ',' << ' ' << ',' << ' ' << ',' << ' ' << ',' << benchmark_config.steps
                 << ',';
 
-            return benchmark(experience_config.steps, experience_config.dt,
-                             experience_config.thermal_diffusivity, initial_temperature_field);
+            return benchmark(benchmark_config.steps, benchmark_config.dt,
+                             benchmark_config.thermal_diffusivity, initial_temperature_field);
         }
 
         case ExperimentType::GridRefinement: {
-            experience_config.gird.nx = experience_config.gird.nx * 2;
-            experience_config.gird.ny = experience_config.gird.ny * 2;
-            experience_config.gird.dx = 1.0 / (experience_config.gird.nx - 1);
-            experience_config.gird.dy = 1.0 / (experience_config.gird.ny - 1);
+            benchmark_config.gird.nx = benchmark_config.gird.nx * 2;
+            benchmark_config.gird.ny = benchmark_config.gird.ny * 2;
+            benchmark_config.gird.dx = 1.0 / (benchmark_config.gird.nx - 1);
+            benchmark_config.gird.dy = 1.0 / (benchmark_config.gird.ny - 1);
             initial_temperature_field = heat_diffusion::make_temperature_grid(
-                experience_config.gird, experience_config.initial_field_type,
-                experience_config.initial_temperature, experience_config.thermal_diffusivity,
-                experience_config.dt);
-            std::cout << std::setprecision(10) << "nodes: " << experience_config.gird.nx << '\n';
-            csv << experience_config.gird.nx << ',' << experience_config.gird.ny << ',' << ' '
-                << ',' << ' ' << ',' << ' ' << ',';
-            return benchmark(experience_config.steps, experience_config.dt,
-                             experience_config.thermal_diffusivity, initial_temperature_field);
+                benchmark_config.gird, benchmark_config.initial_field_type,
+                benchmark_config.initial_temperature, benchmark_config.thermal_diffusivity,
+                benchmark_config.dt);
+            std::cout << "nodes: " << benchmark_config.gird.nx << '\n';
+            csv << benchmark_config.gird.nx << ',' << benchmark_config.gird.ny << ',' << ' ' << ','
+                << ' ' << ',' << ' ' << ',';
+            return benchmark(benchmark_config.steps, benchmark_config.dt,
+                             benchmark_config.thermal_diffusivity, initial_temperature_field);
+        }
+
+        case ExperimentType::TimeStepRefinement: {
+            benchmark_config.dt = benchmark_config.dt * 0.5;
+            benchmark_config.steps = benchmark_config.steps * 2;
+            initial_temperature_field = heat_diffusion::make_temperature_grid(
+                benchmark_config.gird, benchmark_config.initial_field_type,
+                benchmark_config.initial_temperature, benchmark_config.thermal_diffusivity,
+                benchmark_config.dt);
+            std::cout << "dt: " << benchmark_config.dt << '\n';
+            csv << ' ' << ',' << ' ' << ',' << ' ' << ',' << benchmark_config.dt << ','
+                << benchmark_config.steps << ',';
+            return benchmark(benchmark_config.steps, benchmark_config.dt,
+                             benchmark_config.thermal_diffusivity, initial_temperature_field);
         }
     }
     throw std::invalid_argument("错误的实验类型");
@@ -177,11 +195,11 @@ static void run(const std::string& data, const std::string& experiment_name,
     std::cout << "steps: " << experience_config.steps << '\n';
     std::cout << "*******************          *********************" << '\n';
 
-    HeatDiffusionConfig bench_config = experience_config;
+    HeatDiffusionConfig benchmark_config = experience_config;
 
     for (int i = 0; i < experiment_count; ++i) {
         ErrorMetrics result =
-            run_mode(bench_config, experiment_type, initial_temperature_field, csv);
+            run_mode(benchmark_config, experiment_type, initial_temperature_field, csv);
 
         std::cout << "mae: " << result.mean_absolute_error << '\n';
         std::cout << "rmse: " << result.root_mean_square_error << '\n';
@@ -195,10 +213,10 @@ static void run(const std::string& data, const std::string& experiment_name,
 int main() {
     auto data = common::make_run_timestamp();
     std::string experiment_name = "error_experiment";
-    std::string filename = "grid_refinement_experiment";
+    std::string filename = "time_step_refinement_experiment";
 
-    const ExperimentType experiment_type = ExperimentType::GridRefinement;
+    const ExperimentType experiment_type = ExperimentType::TimeStepRefinement;
 
-    error_experiment::run(data, experiment_name, filename, error_experiment::grid_refinement_config,
-                          experiment_type);
+    error_experiment::run(data, experiment_name, filename,
+                          error_experiment::time_step_refinement_config, experiment_type);
 }

@@ -12,7 +12,7 @@ python Project02_heat_equation/benchmarks/scripts/plot_error_experiment.py
 在 [plot_error_experiment.py](scripts/plot_error_experiment.py) 顶部修改默认实验名即可选择常用实验，只填写文件名前缀，不带时间标识或 `.csv`：
 
 ```python
-DEFAULT_EXPERIMENT = "grid_refinement_experiment"
+DEFAULT_EXPERIMENT = "time_step_refinement_experiment"
 ```
 
 也可以临时用命令行覆盖，无需修改脚本：
@@ -20,6 +20,7 @@ DEFAULT_EXPERIMENT = "grid_refinement_experiment"
 ```powershell
 python Project02_heat_equation/benchmarks/scripts/plot_error_experiment.py --experiment unstable_dt_experiment
 python Project02_heat_equation/benchmarks/scripts/plot_error_experiment.py --experiment grid_refinement_experiment
+python Project02_heat_equation/benchmarks/scripts/plot_error_experiment.py --experiment time_step_refinement_experiment
 python Project02_heat_equation/benchmarks/scripts/plot_error_experiment.py --experiment base_line --timestamp 20261021_192300
 ```
 
@@ -40,18 +41,21 @@ python Project02_heat_equation/benchmarks/scripts/plot_error_experiment.py --exp
 
 - 固定网格、扩散系数和时间步，仅改变步数：横轴为 `steps`。
 - 固定扩散系数、时间步和步数，仅改变网格：横轴优先取变化的 `nx`（旧格式取 `dx`）；仅 y 方向变化时取 `ny` 或 `dy`。方形网格标注 `nx = ny`，等间距网格标注 `dx = dy`。标题注明固定步数与 `final t = dt * steps`。
+- 固定网格和扩散系数、改变时间步：横轴为 `dt`。步数固定时，标题显示变化的终止时刻范围，并提示这不是同一终止时刻的时间收敛比较。也支持同步调整步数、保持 `dt * steps` 不变的扫描，此时标题标注固定终止时刻；终止时刻一致性的相对容差为 `1e-8`，绝对容差为 `1e-14`。
 
-横轴以 2 为底取对数，纵轴为温度误差的对数。每个横坐标只允许一组测量。时间步与网格同时变化、时间步细化等其他扫描目前会明确报告不支持，避免错误地画成步数或网格扫描。
+横轴以 2 为底取对数，纵轴为温度误差的对数。每个横坐标只允许一组测量。网格与时间步同时变化等其他扫描会明确报告不支持，避免误用横轴。
 
 蓝色表示 MAE，橙色表示 RMSE。零值和非有限值无法作为普通对数坐标点：零值在图的下边缘标注，`inf`/`nan` 在上边缘标注，其标记高度不表示误差大小，曲线在这些位置断开。
 
-旧格式步数扫描的标题根据 CSV 参数计算显式五点差分的稳定条件 `rx + ry <= 0.5` 及时间步上限：
+当前矩形区域的两个方向长度均为 1。节点数格式的 CSV 使用脚本顶部的 `DOMAIN_LENGTH_X = 1.0`、`DOMAIN_LENGTH_Y = 1.0`，按包含两端点的网格计算 `dx = Lx/(nx-1)`、`dy = Ly/(ny-1)`；旧格式使用 CSV 已记录的 `dx、dy`。物理区域尺寸改变时需同步修改这两个常量。
+
+标题据此计算显式五点差分的稳定条件 `rx + ry <= 0.5` 及时间步上限：
 
 ```text
 rx + ry = thermal_diffusivity * dt * (1/dx^2 + 1/dy^2)
 dt_limit = 0.5 / (thermal_diffusivity * (1/dx^2 + 1/dy^2))
 ```
 
-这些值使用 CSV 中已舍入的参数。只有 `nx、ny` 的 CSV 没有记录物理区域长度，脚本不从节点数量推断 `dx、dy` 或稳定上限；网格扫描图也不标注单一稳定上限。
+这些值使用 CSV 中已舍入的参数与配置的物理区域长度。多个测量点的稳定上限或 `rx+ry` 不同时，标题展示其最小值到最大值。
 
 脚本只展示已有误差结果，不重新运行求解器，不验证不同网格的物理区域是否相同；RMSE 为 `inf` 也可能来自误差平方求和溢出，不能仅凭该指标判定温度数组已包含非有限值。
