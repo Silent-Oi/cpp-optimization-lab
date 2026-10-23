@@ -12,7 +12,7 @@ import matplotlib
 
 EXPERIMENT_DIR = Path(__file__).resolve().parent.parent / "error_experiment"
 # Change this filename prefix to select the default experiment (no timestamp).
-DEFAULT_EXPERIMENT = "time_step_refinement_experiment"
+DEFAULT_EXPERIMENT = "grid_refinement_experiment"
 # Physical side lengths for nx/ny CSVs; both endpoints are grid nodes.
 DOMAIN_LENGTH_X = 1.0
 DOMAIN_LENGTH_Y = 1.0

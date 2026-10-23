@@ -73,7 +73,7 @@ TemperatureField::TemperatureField(const Grid2D grid, InitialField initial_field
                                    double initial_temperature)
     : grid_{grid} {
     if (grid.nx < 3 || grid.ny < 3 || grid.dx <= 0 || grid.dy <= 0 || !std::isfinite(grid.dx) ||
-        !std::isfinite(grid.dy)) {
+        !std::isfinite(grid.dy) || !std::isfinite(initial_temperature)) {
         throw std::invalid_argument("网格有问题");
     }
     switch (initial_field_type) {
@@ -100,12 +100,14 @@ const std::vector<double>& TemperatureField::get_temperature() const {
 
 // ---- 设置场信息 --------------------------------------------------------------
 
-
-
 // ---- 预计算更新缓存 --------------------------------------------------------------
 
-const NuemricalWorkspace TemperatureField::make_numerical_workspace(double thermal_diffusivity,
-                                                                    double dt) const {
+NuemricalWorkspace TemperatureField::make_numerical_workspace(double thermal_diffusivity,
+                                                              double dt) const {
+    if (thermal_diffusivity < 0 || dt < 0 || !std::isfinite(thermal_diffusivity) ||
+        !std::isfinite(dt)) {
+        throw std::invalid_argument("输入有问题");
+    }
     double rx = thermal_diffusivity * dt / (grid_.dx * grid_.dx);
     double ry = thermal_diffusivity * dt / (grid_.dy * grid_.dy);
     double rc = 1 - 2 * rx - 2 * ry;
@@ -122,7 +124,7 @@ const NuemricalWorkspace TemperatureField::make_numerical_workspace(double therm
 // 中心差分解
 // ============================================================================
 
-const void TemperatureField::numerical_solve_step(NuemricalWorkspace& workspace) {
+void TemperatureField::numerical_solve_step(NuemricalWorkspace& workspace) {
     const std::size_t number_y = grid_.ny;
     const std::size_t number_x = grid_.nx;
     const double rx = workspace.rx;
@@ -149,7 +151,7 @@ const void TemperatureField::numerical_solve_step(NuemricalWorkspace& workspace)
     temperature_.swap(workspace.temperature_cache);
 }
 
-const void TemperatureField::numerical_solve(NuemricalWorkspace& workspace, const int steps) {
+void TemperatureField::numerical_solve(NuemricalWorkspace& workspace, const int steps) {
     if (steps < 0) {
         throw std::invalid_argument("step must be non-negative");
     }
@@ -163,7 +165,7 @@ const void TemperatureField::numerical_solve(NuemricalWorkspace& workspace, cons
 // 解析解(暂时只支持正弦场）
 // ============================================================================
 
-const void TemperatureField::analytical_solve(const double thermal_diffusivity, const double time) {
+void TemperatureField::analytical_solve(const double thermal_diffusivity, const double time) {
     std::size_t number_y = grid_.ny;
     std::size_t number_x = grid_.nx;
     std::size_t node_count = number_y * number_x;

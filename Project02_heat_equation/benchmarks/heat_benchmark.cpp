@@ -83,9 +83,13 @@ static ErrorMetrics compute_error_metrics(const std::vector<double>& expected,
 
 namespace error_experiment {
 
+// ---- 稳定性要求实验设置 --------------------------------------------------------------
+
 HeatDiffusionConfig unstable_dt_config{
     default_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 1, 9, 0.25,
 };
+
+// ---- 网格缩放实验设置 --------------------------------------------------------------
 
 heat_diffusion::Grid2D grid_refinement_grid{
     5,
@@ -95,19 +99,23 @@ heat_diffusion::Grid2D grid_refinement_grid{
 };
 
 HeatDiffusionConfig grid_refinement_config{
-    grid_refinement_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 16, 9, 0.000001,
+    grid_refinement_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 16, 11, 0.000001,
 };
 
+// ---- 时间步缩放实验设置 --------------------------------------------------------------
+
 heat_diffusion::Grid2D time_step_refinement_grid{
-    1024,
-    1024,
-    1.0 / 1023,
-    1.0 / 1023,
+    8193,
+    8193,
+    1.0 / 8192,
+    1.0 / 8192,
 };
 
 HeatDiffusionConfig time_step_refinement_config{
     time_step_refinement_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 32, 9, 0.05,
 };
+
+// ---- 误差计算 --------------------------------------------------------------
 
 static ErrorMetrics benchmark(const int steps, const double dt, const double thermal_diffusivity,
                               const heat_diffusion::TemperatureField& initial_temperature_field) {
@@ -126,6 +134,8 @@ static ErrorMetrics benchmark(const int steps, const double dt, const double the
     return compute_error_metrics(analyticall_result, numerical_result);
 }
 
+// ---- 实验类型选择 --------------------------------------------------------------
+
 static ErrorMetrics run_mode(HeatDiffusionConfig& benchmark_config,
                              const ExperimentType& experiment_type,
                              heat_diffusion::TemperatureField& initial_temperature_field,
@@ -143,8 +153,8 @@ static ErrorMetrics run_mode(HeatDiffusionConfig& benchmark_config,
         }
 
         case ExperimentType::GridRefinement: {
-            benchmark_config.gird.nx = benchmark_config.gird.nx * 2 + 1;
-            benchmark_config.gird.ny = benchmark_config.gird.ny * 2 + 1;
+            benchmark_config.gird.nx = benchmark_config.gird.nx * 2 - 1;
+            benchmark_config.gird.ny = benchmark_config.gird.ny * 2 - 1;
             benchmark_config.gird.dx = 1.0 / (benchmark_config.gird.nx - 1);
             benchmark_config.gird.dy = 1.0 / (benchmark_config.gird.ny - 1);
             initial_temperature_field = heat_diffusion::TemperatureField(
@@ -171,6 +181,8 @@ static ErrorMetrics run_mode(HeatDiffusionConfig& benchmark_config,
     }
     throw std::invalid_argument("错误的实验类型");
 }
+
+// ---- 实验主体 --------------------------------------------------------------
 
 static void run(const std::string& data, const std::string& experiment_name,
                 const std::string& filename, const HeatDiffusionConfig& experience_config,
@@ -223,10 +235,10 @@ static void run(const std::string& data, const std::string& experiment_name,
 int main() {
     auto data = common::make_run_timestamp();
     std::string experiment_name = "error_experiment";
-    std::string filename = "time_step_refinement_experiment";
+    std::string filename = "grid_refinement_experiment";
 
-    const ExperimentType experiment_type = ExperimentType::TimeStepRefinement;
+    const ExperimentType experiment_type = ExperimentType::GridRefinement;
 
-    error_experiment::run(data, experiment_name, filename,
-                          error_experiment::time_step_refinement_config, experiment_type);
+    error_experiment::run(data, experiment_name, filename, error_experiment::grid_refinement_config,
+                          experiment_type);
 }

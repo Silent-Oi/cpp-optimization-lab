@@ -13,16 +13,6 @@ struct Grid2D {
 
 enum class InitialField { Uniform, SineMode };
 
-struct TemperatureGrid {
-    Grid2D grid;
-    double rx;
-    double ry;
-    double rc;
-    // index = y*nx + x; [0, nx*ny)
-    std::vector<double> temperature;
-    std::vector<double> temperature_cache;
-};
-
 struct NuemricalWorkspace {
     double rx;
     double ry;
