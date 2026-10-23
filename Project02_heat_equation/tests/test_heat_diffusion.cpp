@@ -10,8 +10,8 @@ const std::size_t nx = 128;
 const std::size_t ny = 128;
 const double length_x = 1;
 const double length_y = 1;
-const double dx = length_x / (nx-1);
-const double dy = length_y / (ny-1);
+const double dx = length_x / (nx - 1);
+const double dy = length_y / (ny - 1);
 
 heat_diffusion::Grid2D test_gird{
     nx,
@@ -28,41 +28,46 @@ namespace heat_diffusion {
 // ============================================================================
 
 void test_numerical_solve_step(const double thermal_diffusivity, const double dt,
-                               double tolerance) {
-    const TemperatureGrid test_temperature_field = make_temperature_grid(
-        test_gird, heat_diffusion::InitialField::SineMode, 16, thermal_diffusivity, dt);
+                               const double tolerance) {
+    TemperatureField test_temperature_field(test_gird, heat_diffusion::InitialField::SineMode, 16);
 
-    TemperatureGrid numerical_temperature_field = test_temperature_field;
-    TemperatureGrid analytical_temperature_field = test_temperature_field;
+    TemperatureField numerical_temperature_field = test_temperature_field;
+    TemperatureField analytical_temperature_field = test_temperature_field;
 
-    numerical::solve(numerical_temperature_field, 1);
-    analytical::solve(analytical_temperature_field, thermal_diffusivity, dt);
+    NuemricalWorkspace workspace =
+        numerical_temperature_field.make_numerical_workspace(thermal_diffusivity, dt);
+    numerical_temperature_field.numerical_solve(workspace, 1);
+    analytical_temperature_field.analytical_solve(thermal_diffusivity, dt);
+    const std::vector<double>& numerical_result = numerical_temperature_field.get_temperature();
+    const std::vector<double>& analyticall_result = analytical_temperature_field.get_temperature();
 
-    std::size_t node_count = test_temperature_field.grid.nx * test_temperature_field.grid.ny;
+    std::size_t node_count = nx * ny;
 
     for (std::size_t i = 0; i < node_count; ++i) {
-        common::expect_near(numerical_temperature_field.temperature[i],
-                            analytical_temperature_field.temperature[i], tolerance);
+        common::expect_near(numerical_result[i], analyticall_result[i], tolerance);
     }
 }
 
-void test_numberical_solve(const double thermal_diffusivity, int steps, double dt,
-                           double tolerance) {
-    const TemperatureGrid test_temperature_field = make_temperature_grid(
-        test_gird, heat_diffusion::InitialField::SineMode, 16, thermal_diffusivity, dt);
+void test_numberical_solve(const double thermal_diffusivity, const int steps, const double dt,
+                           const double tolerance) {
+    TemperatureField test_temperature_field(test_gird, heat_diffusion::InitialField::SineMode, 16);
 
-    TemperatureGrid numerical_temperature_field = test_temperature_field;
-    TemperatureGrid analytical_temperature_field = test_temperature_field;
+    TemperatureField numerical_temperature_field = test_temperature_field;
+    TemperatureField analytical_temperature_field = test_temperature_field;
+
     double time = steps * dt;
 
-    numerical::solve(numerical_temperature_field, steps);
-    analytical::solve(analytical_temperature_field, thermal_diffusivity, time);
+    NuemricalWorkspace workspace =
+        numerical_temperature_field.make_numerical_workspace(thermal_diffusivity, dt);
+    numerical_temperature_field.numerical_solve(workspace, steps);
+    analytical_temperature_field.analytical_solve(thermal_diffusivity, time);
+    const std::vector<double>& numerical_result = numerical_temperature_field.get_temperature();
+    const std::vector<double>& analyticall_result = analytical_temperature_field.get_temperature();
 
-    std::size_t node_count = test_temperature_field.grid.nx * test_temperature_field.grid.ny;
+    std::size_t node_count = nx * ny;
 
     for (std::size_t i = 0; i < node_count; ++i) {
-        common::expect_near(numerical_temperature_field.temperature[i],
-                            analytical_temperature_field.temperature[i], tolerance);
+        common::expect_near(numerical_result[i], analyticall_result[i], tolerance);
     }
 }
 

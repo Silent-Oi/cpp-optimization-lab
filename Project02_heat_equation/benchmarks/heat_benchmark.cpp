@@ -34,7 +34,7 @@ heat_diffusion::Grid2D default_grid{
 
 // 默认设置时间步 dt <= 0.09537
 HeatDiffusionConfig default_config{
-    default_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 64, 9, 0.01,
+    default_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 64, 12, 0.01,
 };
 
 enum class ExperimentType { UnstableTimeStep, GridRefinement, TimeStepRefinement };
@@ -44,22 +44,22 @@ struct ErrorMetrics {
     double root_mean_square_error;
 };
 
-static ErrorMetrics compute_error_metrics(const heat_diffusion::TemperatureGrid& expected,
-                                          const heat_diffusion::TemperatureGrid& actual) {
-    if (expected.temperature.size() != actual.temperature.size()) {
+static ErrorMetrics compute_error_metrics(const std::vector<double>& expected,
+                                          const std::vector<double>& actual) {
+    if (expected.size() != actual.size()) {
         throw std::invalid_argument("预期值与实际值温度场不同");
     }
 
-    std::size_t node_count = actual.temperature.size();
+    std::size_t node_count = actual.size();
 
-    const double* expected_temperature = expected.temperature.data();
-    const double* actual_temperature = actual.temperature.data();
+    const double* expected_temperature = expected.data();
+    const double* actual_temperature = actual.data();
 
     double error = 0;
     double mae = 0;
     double rmse = 0;
 
-    for (int i = 0; i < node_count; ++i) {
+    for (std::size_t i = 0; i < node_count; ++i) {
         error = actual_temperature[i] - expected_temperature[i];
 
         mae += std::abs(error);
@@ -88,36 +88,47 @@ HeatDiffusionConfig unstable_dt_config{
 };
 
 heat_diffusion::Grid2D grid_refinement_grid{
-    4,
-    4,
-    1.0 / 3,
-    1.0 / 3,
+    5,
+    5,
+    1.0 / 4,
+    1.0 / 4,
 };
 
 HeatDiffusionConfig grid_refinement_config{
-    grid_refinement_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 64, 9, 0.001,
+    grid_refinement_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 16, 9, 0.000001,
+};
+
+heat_diffusion::Grid2D time_step_refinement_grid{
+    1024,
+    1024,
+    1.0 / 1023,
+    1.0 / 1023,
 };
 
 HeatDiffusionConfig time_step_refinement_config{
-    default_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 64, 9, 0.05,
+    time_step_refinement_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 32, 9, 0.05,
 };
 
 static ErrorMetrics benchmark(const int steps, const double dt, const double thermal_diffusivity,
-                              const heat_diffusion::TemperatureGrid& initial_temperature_field) {
+                              const heat_diffusion::TemperatureField& initial_temperature_field) {
     double time = dt * steps;
 
-    heat_diffusion::TemperatureGrid numerical_temperature_field = initial_temperature_field;
-    heat_diffusion::TemperatureGrid analytical_temperature_field = initial_temperature_field;
+    heat_diffusion::TemperatureField numerical_temperature_field = initial_temperature_field;
+    heat_diffusion::TemperatureField analytical_temperature_field = initial_temperature_field;
 
-    heat_diffusion::numerical::solve(numerical_temperature_field, steps);
-    heat_diffusion::analytical::solve(analytical_temperature_field, thermal_diffusivity, time);
+    heat_diffusion::NuemricalWorkspace workspace =
+        numerical_temperature_field.make_numerical_workspace(thermal_diffusivity, dt);
+    numerical_temperature_field.numerical_solve(workspace, steps);
+    analytical_temperature_field.analytical_solve(thermal_diffusivity, time);
+    const std::vector<double>& numerical_result = numerical_temperature_field.get_temperature();
+    const std::vector<double>& analyticall_result = analytical_temperature_field.get_temperature();
 
-    return compute_error_metrics(analytical_temperature_field, numerical_temperature_field);
+    return compute_error_metrics(analyticall_result, numerical_result);
 }
 
 static ErrorMetrics run_mode(HeatDiffusionConfig& benchmark_config,
                              const ExperimentType& experiment_type,
-                             heat_diffusion::TemperatureGrid& initial_temperature_field,
+                             heat_diffusion::TemperatureField& initial_temperature_field,
                              std::ofstream& csv) {
     switch (experiment_type) {
         case ExperimentType::UnstableTimeStep: {
@@ -132,14 +143,15 @@ static ErrorMetrics run_mode(HeatDiffusionConfig& benchmark_config,
         }
 
         case ExperimentType::GridRefinement: {
-            benchmark_config.gird.nx = benchmark_config.gird.nx * 2;
-            benchmark_config.gird.ny = benchmark_config.gird.ny * 2;
+            benchmark_config.gird.nx = benchmark_config.gird.nx * 2 + 1;
+            benchmark_config.gird.ny = benchmark_config.gird.ny * 2 + 1;
             benchmark_config.gird.dx = 1.0 / (benchmark_config.gird.nx - 1);
             benchmark_config.gird.dy = 1.0 / (benchmark_config.gird.ny - 1);
-            initial_temperature_field = heat_diffusion::make_temperature_grid(
+            initial_temperature_field = heat_diffusion::TemperatureField(
                 benchmark_config.gird, benchmark_config.initial_field_type,
-                benchmark_config.initial_temperature, benchmark_config.thermal_diffusivity,
-                benchmark_config.dt);
+                benchmark_config.initial_temperature);
+            ;
+
             std::cout << "nodes: " << benchmark_config.gird.nx << '\n';
             csv << benchmark_config.gird.nx << ',' << benchmark_config.gird.ny << ',' << ' ' << ','
                 << ' ' << ',' << ' ' << ',';
@@ -150,10 +162,6 @@ static ErrorMetrics run_mode(HeatDiffusionConfig& benchmark_config,
         case ExperimentType::TimeStepRefinement: {
             benchmark_config.dt = benchmark_config.dt * 0.5;
             benchmark_config.steps = benchmark_config.steps * 2;
-            initial_temperature_field = heat_diffusion::make_temperature_grid(
-                benchmark_config.gird, benchmark_config.initial_field_type,
-                benchmark_config.initial_temperature, benchmark_config.thermal_diffusivity,
-                benchmark_config.dt);
             std::cout << "dt: " << benchmark_config.dt << '\n';
             csv << ' ' << ',' << ' ' << ',' << ' ' << ',' << benchmark_config.dt << ','
                 << benchmark_config.steps << ',';
@@ -166,7 +174,11 @@ static ErrorMetrics run_mode(HeatDiffusionConfig& benchmark_config,
 
 static void run(const std::string& data, const std::string& experiment_name,
                 const std::string& filename, const HeatDiffusionConfig& experience_config,
-                const ExperimentType& experiment_type) {
+                const ExperimentType experiment_type) {
+    if (experience_config.initial_field_type != heat_diffusion::InitialField::SineMode) {
+        throw std::invalid_argument("暂不支持其他场");
+    }
+
     std::ofstream csv =
         common::create_result_csv(PROJECT02_SOURCE_DIR, data, experiment_name, filename);
     csv << "nx,ny,thermal_diffusivity,dt,steps,mae,rmse\n";
@@ -176,11 +188,9 @@ static void run(const std::string& data, const std::string& experiment_name,
 
     std::size_t experiment_count = experience_config.experiment_count;
 
-    heat_diffusion::TemperatureGrid initial_temperature_field =
-        heat_diffusion::make_temperature_grid(
-            experience_config.gird, experience_config.initial_field_type,
-            experience_config.initial_temperature, experience_config.thermal_diffusivity,
-            experience_config.dt);
+    heat_diffusion::TemperatureField initial_temperature_field(
+        experience_config.gird, experience_config.initial_field_type,
+        experience_config.initial_temperature);
 
     csv << experience_config.gird.nx << ',' << experience_config.gird.ny << ','
         << experience_config.thermal_diffusivity << ',' << experience_config.dt << ','

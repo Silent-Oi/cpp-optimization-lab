@@ -1,3 +1,4 @@
+#pragma once
 #include <vector>
 
 #include "state.h"
@@ -9,6 +10,24 @@ namespace heat_diffusion {
 TemperatureGrid make_temperature_grid(const Grid2D& grid, InitialField initial_field_type,
                                       double initial_temperature, double thermal_diffusivity,
                                       double dt);
+
+class TemperatureField {
+   public:
+    TemperatureField(const Grid2D grid, InitialField initial_field_type,
+                     double initial_temperature);
+    const NuemricalWorkspace make_numerical_workspace(double thermal_diffusivity,
+                                       double dt) const;
+    const Grid2D& get_grid() const;
+    const std::vector<double>& get_temperature() const;
+
+    const void numerical_solve_step(NuemricalWorkspace& workspace);
+    const void numerical_solve(NuemricalWorkspace& workspace, const int steps);
+    const void analytical_solve(const double thermal_diffusivity, const double time);
+
+   private:
+    Grid2D grid_;
+    std::vector<double> temperature_;
+};
 
 // ============================================================================
 // 中心差分解

@@ -23,4 +23,11 @@ struct TemperatureGrid {
     std::vector<double> temperature_cache;
 };
 
+struct NuemricalWorkspace {
+    double rx;
+    double ry;
+    double rc;
+    std::vector<double> temperature_cache;
+};
+
 }  // namespace heat_diffusion
