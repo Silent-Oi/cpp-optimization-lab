@@ -1,6 +1,7 @@
 #pragma once
-#include <vector>
 #include <barrier>
+#include <vector>
+
 #include "state.h"
 
 namespace heat_diffusion {
@@ -16,16 +17,12 @@ class TemperatureField {
     const std::vector<double>& get_temperature() const;
 
     void numerical_solve_step(NuemricalWorkspace& workspace);
-    void numerical_solve_step(NuemricalWorkspace& workspace, const std::size_t j_begin,
-                              const std::size_t j_end, const std::size_t i_begin,
-                              const std::size_t i_end);
+    void numerical_solve_step(NuemricalWorkspace& workspace, const std::size_t begin,
+                              const std::size_t end);
 
     void numerical_solve(NuemricalWorkspace& workspace, const int steps);
     void analytical_solve(const double thermal_diffusivity, const double time);
 
-    void numerical_solve_range(NuemricalWorkspace& workspace, const std::size_t j_begin,
-                               const std::size_t j_end, const std::size_t i_begin,
-                               const std::size_t i_end, const int steps, std::barrier<>& sync);
     void numerical_solve_parallel(NuemricalWorkspace& workspace, const int steps,
                                   const std::size_t thread_count);
 

@@ -5,7 +5,7 @@ namespace {
 const double thermal_diffusivity = 1e-5;
 const int steps = 16;
 const double dt = 0.01;
-const std::size_t thread_count = 3;
+const std::size_t thread_count = 2;
 const double tolerance = 1e-5;
 
 }  // namespace

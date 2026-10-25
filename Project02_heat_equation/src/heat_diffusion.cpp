@@ -151,12 +151,10 @@ void TemperatureField::numerical_solve_step(NuemricalWorkspace& workspace) {
                                      ry * (up_temperature + down_temperature);
         }
     }
-    temperature_.swap(workspace.temperature_cache);
 }
 
-void TemperatureField::numerical_solve_step(NuemricalWorkspace& workspace,
-                                            const std::size_t j_begin, const std::size_t j_end,
-                                            const std::size_t i_begin, const std::size_t i_end) {
+void TemperatureField::numerical_solve_step(NuemricalWorkspace& workspace, const std::size_t begin,
+                                            const std::size_t end) {
     const std::size_t number_y = grid_.ny;
     const std::size_t number_x = grid_.nx;
     const double rx = workspace.rx;
@@ -165,52 +163,9 @@ void TemperatureField::numerical_solve_step(NuemricalWorkspace& workspace,
     const double* __restrict old_temperature = temperature_.data();
     double* __restrict new_temperature = workspace.temperature_cache.data();
 
-    if (j_begin == j_end) {
-        for (std::size_t i = i_begin; i < i_end; ++i) {
-            std::size_t index = j_begin * number_x + i;
-
-            double orign_temperature = old_temperature[index];
-            double left_temperature = old_temperature[index - 1];
-            double right_temperature = old_temperature[index + 1];
-            double down_temperature = old_temperature[index - number_x];
-            double up_temperature = old_temperature[index + number_x];
-
-            new_temperature[index] = rc * orign_temperature +
-                                     rx * (right_temperature + left_temperature) +
-                                     ry * (up_temperature + down_temperature);
-        }
-
-    } else {
-        for (std::size_t i = i_begin; i < number_x - 1; ++i) {
-            std::size_t index = j_begin * number_x + i;
-
-            double orign_temperature = old_temperature[index];
-            double left_temperature = old_temperature[index - 1];
-            double right_temperature = old_temperature[index + 1];
-            double down_temperature = old_temperature[index - number_x];
-            double up_temperature = old_temperature[index + number_x];
-
-            new_temperature[index] = rc * orign_temperature +
-                                     rx * (right_temperature + left_temperature) +
-                                     ry * (up_temperature + down_temperature);
-        }
-        for (std::size_t j = j_begin + 1; j < j_end; ++j) {
-            for (std::size_t i = 1; i < number_x - 1; ++i) {
-                std::size_t index = j * number_x + i;
-
-                double orign_temperature = old_temperature[index];
-                double left_temperature = old_temperature[index - 1];
-                double right_temperature = old_temperature[index + 1];
-                double down_temperature = old_temperature[index - number_x];
-                double up_temperature = old_temperature[index + number_x];
-
-                new_temperature[index] = rc * orign_temperature +
-                                         rx * (right_temperature + left_temperature) +
-                                         ry * (up_temperature + down_temperature);
-            }
-        }
-        for (std::size_t i = 1; i < i_end; ++i) {
-            std::size_t index = j_end * number_x + i;
+    for (std::size_t j = begin; j < end; ++j) {
+        for (std::size_t i = 1; i < number_x - 1; ++i) {
+            std::size_t index = j * number_x + i;
 
             double orign_temperature = old_temperature[index];
             double left_temperature = old_temperature[index - 1];
@@ -232,34 +187,11 @@ void TemperatureField::numerical_solve(NuemricalWorkspace& workspace, const int 
 
     for (std::size_t i = 0; i < steps; ++i) {
         numerical_solve_step(workspace);
+        temperature_.swap(workspace.temperature_cache);
     }
 }
 
-void TemperatureField::numerical_solve_range(NuemricalWorkspace& workspace,
-                                             const std::size_t j_begin, const std::size_t j_end,
-                                             const std::size_t i_begin, const std::size_t i_end,
-                                             const int steps, std::barrier<>& sync) {
-    if (steps < 0) {
-        throw std::invalid_argument("step must be non-negative");
-    }
-
-    if (j_begin < 0 || j_end < 0 || i_begin < 0 || i_begin < 0) {
-        throw std::invalid_argument("index must be non-negative");
-    }
-
-    if (j_begin > j_end) {
-        throw std::invalid_argument("begin must < end");
-    }
-    if (j_end > grid_.ny || i_end > grid_.nx) {
-        throw std::invalid_argument("end must <= count");
-    }
-
-    for (std::size_t i = 0; i < steps; ++i) {
-        numerical_solve_step(workspace, j_begin, j_end, i_begin, i_end);
-        sync.arrive_and_wait();
-        sync.arrive_and_wait();
-    }
-}
+// ---- 多线程更新 --------------------------------------------------------------
 
 void TemperatureField::numerical_solve_parallel(NuemricalWorkspace& workspace, const int steps,
                                                 const std::size_t thread_count) {
@@ -271,57 +203,63 @@ void TemperatureField::numerical_solve_parallel(NuemricalWorkspace& workspace, c
         throw std::invalid_argument("thread_cout must be positive");
     }
 
-    const std::size_t number_y = grid_.ny;
-    const std::size_t number_x = grid_.nx;
-    const std::size_t node_count = number_y * number_x;
+    if (steps == 0) {
+        return;
+    }
 
-    const std::size_t thread_require = std::min(number_y, thread_count);
+    if (thread_count == 1) {
+        numerical_solve(workspace, steps);
+        return;
+    }
+
+    const std::size_t number_y = grid_.ny;
+    const std::size_t row_calu = number_y - 2;
+
+    const std::size_t thread_require = std::min(row_calu, thread_count);
     if (thread_require == 0) {
         return;
     }
 
-    std::barrier<> step_sync(thread_require);
+    auto exchange_buffers = [this, &workspace]() noexcept {
+        temperature_.swap(workspace.temperature_cache);
+    };
 
-    const std::size_t node_range = node_count / thread_require;
-    const std::size_t remainder = node_count % thread_require;
-    std::size_t node_range_remainder = node_range + 1;
+    std::barrier step_sync(thread_require, exchange_buffers);
 
-    const std::size_t m_j_begin = 1;
-    const std::size_t m_j_end = std::min(node_range / number_x, number_y - 1);
-    const std::size_t m_i_begin = 1;
-    const std::size_t m_i_end =std::min(node_range % number_x, number_x - 1);
+    const std::size_t row_range = row_calu / thread_require;
+    const std::size_t remainder = row_calu % thread_require;
+    std::size_t row_range_remainder = row_range + 1;
+
+    const std::size_t m_begin = 1;
+    const std::size_t m_end = 1 + row_range;
 
     std::vector<std::jthread> workers;
 
-    std::size_t begin_index = node_range;
-    std::size_t end_index;
+    std::size_t begin_row = row_range + 1;
+    std::size_t end_row;
 
     for (std::size_t i = 1; i < thread_require; ++i) {
         if (i <= remainder) {
-            end_index = begin_index + node_range_remainder;
+            end_row = begin_row + row_range_remainder;
         } else {
-            end_index = begin_index + node_range;
+            end_row = begin_row + row_range;
         }
 
-        const std::size_t j_begin = std::max(begin_index / number_x, std::size_t{1});
-        const std::size_t j_end = std::min(end_index / number_x, number_y - 1);
-        const std::size_t i_begin = std::max(begin_index % number_x, std::size_t{1});
-        const std::size_t i_end = std::min(end_index % number_x, number_x - 1);
-
-        workers.emplace_back([this, &workspace, j_begin, j_end, i_begin, i_end, steps, &step_sync] {
-            numerical_solve_range(workspace, j_begin, j_end, i_begin, i_end, steps, step_sync);
+        workers.emplace_back([this, &workspace, begin_row, end_row, steps, &step_sync]() {
+            for (std::size_t i = 0; i < steps; ++i) {
+                numerical_solve_step(workspace, begin_row, end_row);
+                step_sync.arrive_and_wait();
+            }
         });
 
-        begin_index = end_index;
+        begin_row = end_row;
     }
 
     for (std::size_t i = 0; i < steps; ++i) {
-        numerical_solve_step(workspace, m_j_begin, m_j_end, m_i_begin, m_i_end);
-        step_sync.arrive_and_wait();
-        temperature_.swap(workspace.temperature_cache);
+        numerical_solve_step(workspace, m_begin, m_end);
         step_sync.arrive_and_wait();
     }
-    
+
     for (auto& worker : workers) {
         worker.join();
     }
