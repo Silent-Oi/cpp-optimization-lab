@@ -234,8 +234,9 @@ void TemperatureField::numerical_solve_parallel(NuemricalWorkspace& workspace, c
     const std::size_t m_end = 1 + row_range;
 
     std::vector<std::jthread> workers;
+    workers.reserve(thread_require - 1);
 
-    std::size_t begin_row = row_range + 1;
+    std::size_t begin_row = m_end;
     std::size_t end_row;
 
     for (std::size_t i = 1; i < thread_require; ++i) {

@@ -26,15 +26,15 @@ struct HeatDiffusionConfig {
 };
 
 heat_diffusion::Grid2D default_grid{
-    512,
-    512,
-    1.0 / 511,
-    1.0 / 511,
+    1024,
+    1024,
+    1.0 / 1023,
+    1.0 / 1023,
 };
 
 // 默认设置时间步 dt <= 0.09537
 HeatDiffusionConfig default_config{
-    default_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 64, 12, 0.01,
+    default_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 512, 12, 0.01,
 };
 
 enum class ExperimentType { UnstableTimeStep, GridRefinement, TimeStepRefinement };
@@ -232,13 +232,73 @@ static void run(const std::string& data, const std::string& experiment_name,
 
 }  // namespace error_experiment
 
+namespace parallel_experiment {
+
+static void run(const std::string& data, const std::string& experiment_name,
+                const std::string& filename, const HeatDiffusionConfig& experience_config) {
+    if (experience_config.initial_field_type != heat_diffusion::InitialField::SineMode) {
+        throw std::invalid_argument("暂不支持其他场");
+    }
+
+    std::ofstream csv =
+        common::create_result_csv(PROJECT02_SOURCE_DIR, data, experiment_name, filename);
+    csv << "threads,nx,ny,thermal_diffusivity,dt,steps,ns_per_calu\n";
+
+    std::cout << std::setprecision(10);
+    csv << std::setprecision(10);
+
+    std::size_t experiment_count = experience_config.experiment_count;
+    std::size_t thread_count = 1;
+    std::size_t calu_counts =
+        experience_config.gird.nx * experience_config.gird.ny * experience_config.steps;
+
+    heat_diffusion::TemperatureField initial_field(experience_config.gird,
+                                                   experience_config.initial_field_type,
+                                                   experience_config.initial_temperature);
+
+    heat_diffusion::TemperatureField bench_field = initial_field;
+
+    heat_diffusion::NuemricalWorkspace workspace = bench_field.make_numerical_workspace(
+        experience_config.thermal_diffusivity, experience_config.dt);
+
+    // 输出基础信息
+    std::cout << "*******************     BENTCHMARK     *********************" << '\n';
+    std::cout << "dx: " << experience_config.gird.dx << '\n';
+    std::cout << "dy: " << experience_config.gird.dy << '\n';
+    std::cout << "thermal_diffusivity: " << experience_config.thermal_diffusivity << '\n';
+    std::cout << "dt: " << experience_config.dt << '\n';
+    std::cout << "steps: " << experience_config.steps << '\n';
+    std::cout << "*******************          *********************" << '\n';
+    std::cout << '\n';
+
+    HeatDiffusionConfig benchmark_config = experience_config;
+
+    for (int i = 0; i < experiment_count; ++i) {
+        bench_field = initial_field;
+        const auto start = std::chrono::steady_clock::now();
+        bench_field.numerical_solve_parallel(workspace, benchmark_config.steps, thread_count);
+        const auto end = std::chrono::steady_clock::now();
+        const auto run_time_second = std::chrono::duration<double>(end - start).count();
+
+        double ns_per_calu = run_time_second * 1e9 / calu_counts;
+        std::cout << "thread_count: " << thread_count << '\n';
+        std::cout << "ns_per_calu: " << ns_per_calu << '\n';
+        std::cout << '\n';
+        csv << thread_count << ',' << experience_config.gird.nx << ',' << experience_config.gird.ny
+            << ',' << experience_config.thermal_diffusivity << ',' << experience_config.dt << ','
+            << experience_config.steps << ',' << ns_per_calu << '\n';
+        thread_count++;
+    }
+}
+
+}  // namespace parallel_experiment
+
 int main() {
     auto data = common::make_run_timestamp();
-    std::string experiment_name = "error_experiment";
-    std::string filename = "time_step_refinement_experiment";
+    std::string experiment_name = "parallel_experiment";
+    std::string filename = "parallel_experiment";
 
     const ExperimentType experiment_type = ExperimentType::TimeStepRefinement;
 
-    error_experiment::run(data, experiment_name, filename, error_experiment::time_step_refinement_config,
-                          experiment_type);
+    parallel_experiment::run(data, experiment_name, filename, default_config);
 }

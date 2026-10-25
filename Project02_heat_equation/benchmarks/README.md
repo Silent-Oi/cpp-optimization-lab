@@ -1,5 +1,23 @@
 # Project02 数值实验
 
+## 多线程实验绘图
+
+需要 Python 和 Matplotlib。在仓库根目录运行：
+
+```powershell
+python Project02_heat_equation/benchmarks/scripts/plot_parallel_experiment.py
+```
+
+脚本默认读取 `parallel_experiment/results/` 下最新的 `parallel_experiment<时间标识>`，生成 `parallel_experiment/figures/parallel_experiment_<时间标识>.png`。支持与误差绘图相同的文件名后缀、`--timestamp`、`--show`，也可以修改顶部 `DEFAULT_EXPERIMENT` 或使用 `--experiment NAME` 选择其他同格式实验。
+
+输入列为 `threads,nx,ny,thermal_diffusivity,dt,steps,ns_per_calu`。要求每个线程数一条完整记录，网格、扩散系数、时间步和步数在扫描期间固定，参数和耗时均为正数且有限，并包含 1 线程结果。
+
+左图显示 CSV 中记录的单次耗时指标，归一化分母为 `nx × ny × steps`，包含固定边界节点，不能称为每个内部节点的更新时间。右图显示 `time(1 thread)/time(p threads)`，基线是同一并行求解接口的 1 线程调用；虚线为理想线性加速参考。当前 CSV 每种线程数只有一条耗时，图中不将它标为平均值或中位数。
+
+当前输出中的前两列可能合并为 `1 512`。脚本仅对表头为 `threads,nx,...`、缺少一个分隔符且首字段可明确拆成两个整数的行进行兼容读取，并打印提示，不修改源文件。标准逗号格式也可直接读取。早期仅在第一行输出参数、后续只有裸耗时的文件缺少线程映射，脚本会报错，不推断缺失参数。
+
+绘图只消费已有结果，不重新计时或验证数值正确性，也不验证运行时的构建配置和硬件条件。
+
 ## 误差实验：通用绘图
 
 需要 Python 和 Matplotlib。安装依赖后，在仓库根目录运行：
