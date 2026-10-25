@@ -1,3 +1,4 @@
+#include <chrono>
 #include <cmath>
 #include <cstdlib>
 #include <fstream>
@@ -23,19 +24,19 @@ struct HeatDiffusionConfig {
     int steps;
     int experiment_count;
     double dt;
+    std::size_t max_threads;
 };
 
 heat_diffusion::Grid2D default_grid{
-    1024,
-    1024,
-    1.0 / 1023,
-    1.0 / 1023,
+    512,
+    512,
+    1.0 / 511,
+    1.0 / 511,
 };
 
 // 默认设置时间步 dt <= 0.09537
 HeatDiffusionConfig default_config{
-    default_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 512, 12, 0.01,
-};
+    default_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 512, 12, 0.01, 12};
 
 enum class ExperimentType { UnstableTimeStep, GridRefinement, TimeStepRefinement };
 
@@ -86,8 +87,7 @@ namespace error_experiment {
 // ---- 稳定性要求实验设置 --------------------------------------------------------------
 
 HeatDiffusionConfig unstable_dt_config{
-    default_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 1, 9, 0.25,
-};
+    default_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 1, 9, 0.25, 12};
 
 // ---- 网格缩放实验设置 --------------------------------------------------------------
 
@@ -99,8 +99,7 @@ heat_diffusion::Grid2D grid_refinement_grid{
 };
 
 HeatDiffusionConfig grid_refinement_config{
-    grid_refinement_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 16, 11, 0.000001,
-};
+    grid_refinement_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 16, 11, 0.000001, 12};
 
 // ---- 时间步缩放实验设置 --------------------------------------------------------------
 
@@ -112,8 +111,7 @@ heat_diffusion::Grid2D time_step_refinement_grid{
 };
 
 HeatDiffusionConfig time_step_refinement_config{
-    time_step_refinement_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 64, 8, 0.01,
-};
+    time_step_refinement_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 64, 8, 0.01, 12};
 
 // ---- 误差计算 --------------------------------------------------------------
 
@@ -232,14 +230,23 @@ static void run(const std::string& data, const std::string& experiment_name,
 
 }  // namespace error_experiment
 
+// ============================================================================
+// 多线程实验
+// ============================================================================
+
 namespace parallel_experiment {
+
+static double benchmark(heat_diffusion::TemperatureField& bench_field,
+                        heat_diffusion::NuemricalWorkspace& workspace, const int steps,
+                        const std::size_t thread_count) {
+    const auto start = std::chrono::steady_clock::now();
+    bench_field.numerical_solve_parallel(workspace, steps, thread_count);
+    const auto end = std::chrono::steady_clock::now();
+    return std::chrono::duration<double>(end - start).count();
+}
 
 static void run(const std::string& data, const std::string& experiment_name,
                 const std::string& filename, const HeatDiffusionConfig& experience_config) {
-    if (experience_config.initial_field_type != heat_diffusion::InitialField::SineMode) {
-        throw std::invalid_argument("暂不支持其他场");
-    }
-
     std::ofstream csv =
         common::create_result_csv(PROJECT02_SOURCE_DIR, data, experiment_name, filename);
     csv << "threads,nx,ny,thermal_diffusivity,dt,steps,ns_per_calu\n";
@@ -247,8 +254,7 @@ static void run(const std::string& data, const std::string& experiment_name,
     std::cout << std::setprecision(10);
     csv << std::setprecision(10);
 
-    std::size_t experiment_count = experience_config.experiment_count;
-    std::size_t thread_count = 1;
+    std::size_t max_threads = experience_config.max_threads;
     std::size_t calu_counts =
         experience_config.gird.nx * experience_config.gird.ny * experience_config.steps;
 
@@ -271,14 +277,10 @@ static void run(const std::string& data, const std::string& experiment_name,
     std::cout << "*******************          *********************" << '\n';
     std::cout << '\n';
 
-    HeatDiffusionConfig benchmark_config = experience_config;
-
-    for (int i = 0; i < experiment_count; ++i) {
+    for (std::size_t thread_count = 1; thread_count <= max_threads; ++thread_count) {
         bench_field = initial_field;
-        const auto start = std::chrono::steady_clock::now();
-        bench_field.numerical_solve_parallel(workspace, benchmark_config.steps, thread_count);
-        const auto end = std::chrono::steady_clock::now();
-        const auto run_time_second = std::chrono::duration<double>(end - start).count();
+        double run_time_second =
+            benchmark(bench_field, workspace, experience_config.steps, thread_count);
 
         double ns_per_calu = run_time_second * 1e9 / calu_counts;
         std::cout << "thread_count: " << thread_count << '\n';
@@ -287,7 +289,6 @@ static void run(const std::string& data, const std::string& experiment_name,
         csv << thread_count << ',' << experience_config.gird.nx << ',' << experience_config.gird.ny
             << ',' << experience_config.thermal_diffusivity << ',' << experience_config.dt << ','
             << experience_config.steps << ',' << ns_per_calu << '\n';
-        thread_count++;
     }
 }
 
