@@ -105,14 +105,14 @@ HeatDiffusionConfig grid_refinement_config{
 // ---- 时间步缩放实验设置 --------------------------------------------------------------
 
 heat_diffusion::Grid2D time_step_refinement_grid{
-    8193,
-    8193,
-    1.0 / 8192,
-    1.0 / 8192,
+    1025,
+    1025,
+    1.0 / 1024,
+    1.0 / 1024,
 };
 
 HeatDiffusionConfig time_step_refinement_config{
-    time_step_refinement_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 32, 9, 0.05,
+    time_step_refinement_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 64, 8, 0.01,
 };
 
 // ---- 误差计算 --------------------------------------------------------------
@@ -235,10 +235,10 @@ static void run(const std::string& data, const std::string& experiment_name,
 int main() {
     auto data = common::make_run_timestamp();
     std::string experiment_name = "error_experiment";
-    std::string filename = "grid_refinement_experiment";
+    std::string filename = "time_step_refinement_experiment";
 
-    const ExperimentType experiment_type = ExperimentType::GridRefinement;
+    const ExperimentType experiment_type = ExperimentType::TimeStepRefinement;
 
-    error_experiment::run(data, experiment_name, filename, error_experiment::grid_refinement_config,
+    error_experiment::run(data, experiment_name, filename, error_experiment::time_step_refinement_config,
                           experiment_type);
 }

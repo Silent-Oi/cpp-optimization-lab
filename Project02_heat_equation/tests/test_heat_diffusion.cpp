@@ -6,18 +6,11 @@
 
 namespace {
 
-const std::size_t nx = 128;
-const std::size_t ny = 128;
-const double length_x = 1;
-const double length_y = 1;
-const double dx = length_x / (nx - 1);
-const double dy = length_y / (ny - 1);
-
 heat_diffusion::Grid2D test_gird{
-    nx,
-    ny,
-    dx,
-    dy,
+    64,
+    64,
+    1.0 / 63,
+    1.0 / 63,
 };
 
 }  // namespace
@@ -41,7 +34,7 @@ void test_numerical_solve_step(const double thermal_diffusivity, const double dt
     const std::vector<double>& numerical_result = numerical_temperature_field.get_temperature();
     const std::vector<double>& analyticall_result = analytical_temperature_field.get_temperature();
 
-    std::size_t node_count = nx * ny;
+    std::size_t node_count = test_gird.nx * test_gird.ny;
 
     for (std::size_t i = 0; i < node_count; ++i) {
         common::expect_near(numerical_result[i], analyticall_result[i], tolerance);
@@ -64,11 +57,34 @@ void test_numberical_solve(const double thermal_diffusivity, const int steps, co
     const std::vector<double>& numerical_result = numerical_temperature_field.get_temperature();
     const std::vector<double>& analyticall_result = analytical_temperature_field.get_temperature();
 
-    std::size_t node_count = nx * ny;
+    std::size_t node_count = test_gird.nx * test_gird.ny;
 
     for (std::size_t i = 0; i < node_count; ++i) {
         common::expect_near(numerical_result[i], analyticall_result[i], tolerance);
     }
+}
+
+void test_numberical_solve_parallel(const double thermal_diffusivity, const int steps,
+                                    const double dt, const std::size_t thread_cout,
+                                    const double tolerance) {
+    TemperatureField test_field(test_gird, heat_diffusion::InitialField::SineMode, 16);
+    TemperatureField numerical_field = test_field;
+    TemperatureField parallel_field = test_field;
+
+    NuemricalWorkspace workspace = test_field.make_numerical_workspace(thermal_diffusivity, dt);
+
+    numerical_field.numerical_solve(workspace, steps);
+    parallel_field.numerical_solve_parallel(workspace, steps, thread_cout);
+
+    const std::vector<double>& numerical_result = numerical_field.get_temperature();
+    const std::vector<double>& parallel_result = parallel_field.get_temperature();
+
+    std::size_t node_count = test_gird.nx * test_gird.ny;
+
+    for (std::size_t i = 0; i < node_count; ++i) {
+        common::expect_near(numerical_result[i], parallel_result[i], tolerance);
+    }
+
 }
 
 }  // namespace heat_diffusion
