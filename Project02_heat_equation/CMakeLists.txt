@@ -37,11 +37,27 @@ target_link_libraries(heat_tests
     PRIVATE heat_core
 )
 
+add_executable(heat_visualizer
+    visualizer/pixel_buffer.cpp
+ "visualizer/heatmap_renderer.h")
+
+target_include_directories(heat_visualizer
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/visualizer
+        ${CMAKE_SOURCE_DIR}/third_party/RGFW
+)
+
+target_link_libraries(heat_visualizer
+    PRIVATE heat_core
+)
+
+
 if(MSVC)
     target_compile_options(heat_core PRIVATE /Qvec-report:2 /FAsu)
     target_compile_options(heat_core PRIVATE /utf-8)
     target_compile_options(heat_benchmark PRIVATE /utf-8)
     target_compile_options(heat_tests PRIVATE /utf-8)
+    target_compile_options(heat_visualizer PRIVATE /utf-8)
 endif()
 
 # Add executable targets with the CPU implementation.
