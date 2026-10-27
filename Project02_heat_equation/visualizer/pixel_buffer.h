@@ -12,27 +12,25 @@ struct Rgba8 {
 
 class PixelBuffer {
    public:
-    PixelBuffer(int width, int height);
+    PixelBuffer(std::size_t width, std::size_t height);
 
-    int width() const;
-    int height() const;
+    std::size_t width() const;
+    std::size_t height() const;
     std::size_t pixel_count() const;
     const std::vector<std::uint8_t>& bytes() const;
     std::vector<std::uint8_t>& bytes();
 
     std::uint8_t* data();
 
-    bool set_pixel(int x, int y, Rgba8 color);
+    bool set_pixel(std::size_t x, std::size_t y, Rgba8 color);
     bool set_pixel(std::size_t pixel, Rgba8 color);
     void clear();
 
    private:
-    int width_;
-    int height_;
-    std::size_t pixel_number_;
+    std::size_t width_;
+    std::size_t height_;
+    std::size_t pixel_count_;
     std::vector<std::uint8_t> bytes_;
 };
-
-
 
 }  // namespace visualizer
