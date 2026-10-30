@@ -1,3 +1,5 @@
+#pragma once
+
 #include "heat_diffusion.h"
 #include "pixel_buffer.h"
 

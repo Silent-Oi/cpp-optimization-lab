@@ -2,11 +2,11 @@
 
 #include <chrono>
 #include <thread>
-
+#include <cstdlib>
 
 #include "heat_diffusion.h"
 #include "heatmap_renderer.h"
-#include "pixel_buffer.h";
+#include "pixel_buffer.h"
 #include "state.h"
 
 namespace {
@@ -27,7 +27,7 @@ const heat_diffusion::Grid2D default_grid{
     1.0 / 511,
 };
 const heat_diffusion::InitialField default_field_type = heat_diffusion::InitialField::SineMode;
-const double initial_temperature = 64;
+const double initial_temperature = -64;
 const double thermal_diffusivity = 1e-5;
 const double dt = 0.01;
 
@@ -76,15 +76,17 @@ int main() {
         if (RGFW_window_isKeyPressed(window, static_cast<RGFW_key>('r'))) {
             paused = true;
             work_field = initial_field;
-            map_grid_to_buffer(work_field, buffer, initial_temperature, light_red, blue);
+            map_grid_to_buffer(work_field, buffer, std::abs(initial_temperature), light_red,
+                               light_blue);
             RGFW_window_blitSurface(window, surface);
         }
 
         if (RGFW_window_isKeyPressed(window, static_cast<RGFW_key>('n'))) {
             paused = true;
             work_field.numerical_solve_step(workspace);
-            map_grid_to_buffer(work_field, buffer, initial_temperature, light_red, blue);
             work_field.get_temperature().swap(workspace.temperature_cache);
+            map_grid_to_buffer(work_field, buffer, std::abs(initial_temperature), light_red,
+                               light_blue);
             RGFW_window_blitSurface(window, surface);
         }
 

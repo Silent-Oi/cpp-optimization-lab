@@ -19,11 +19,13 @@ double bilinear_interpolate(const double t00, const double t10, const double t01
 }
 
 void map_grid_to_buffer(heat_diffusion::TemperatureField& field, PixelBuffer& buffer,
-                        const double color_scale, const Rgba8& color_pos, const Rgba8& color_neg) {
+                        double color_scale, const Rgba8& color_pos, const Rgba8& color_neg) {
     const heat_diffusion::Grid2D& grid = field.get_grid();
     const std::vector<double>& temperature = field.get_temperature();
     const std::size_t nx = grid.nx;
     const std::size_t ny = grid.ny;
+
+    const double scale = 1 / color_scale;
 
     const std::size_t buffer_width = buffer.width();
     const std::size_t buffer_height = buffer.height();
@@ -36,15 +38,17 @@ void map_grid_to_buffer(heat_diffusion::TemperatureField& field, PixelBuffer& bu
 
     const double nodes_per_pixel = 1.0 / pixels_per_node;
 
-    const std::size_t row_offset = (buffer_width - nx * pixels_per_node) / 2;
-    const std::size_t row_end = row_offset + (nx * pixels_per_node);
+    const std::size_t row_offset = (buffer_width - (nx - 1) * pixels_per_node - 1) / 2;
 
-    const std::size_t column_offset = (buffer_height - ny * pixels_per_node) / 2;
+    const std::size_t column_offset = (buffer_height - (ny - 1) * pixels_per_node - 1) / 2;
     const std::size_t column_end = column_offset + (ny * pixels_per_node);
 
     for (std::size_t j = 0; j < ny - 1; j++) {
         const std::size_t n_count = pixels_per_node + (j == ny - 2 ? 1 : 0);
+
         for (std::size_t n = 0; n < n_count; n++) {
+            std::size_t y = column_end - 1 - (pixels_per_node * j + n);
+
             const double ty = n * nodes_per_pixel;
             for (std::size_t i = 0; i < nx - 1; i++) {
                 const std::size_t m_count = pixels_per_node + (i == nx - 2 ? 1 : 0);
@@ -64,23 +68,28 @@ void map_grid_to_buffer(heat_diffusion::TemperatureField& field, PixelBuffer& bu
                     const double pixel_temperature = bilinear_interpolate(
                         temperature1, temperature2, temperature3, temperature4, tx, ty);
 
-                    const double ratio = std::min(1.0, std::abs(pixel_temperature) / color_scale);
+                    const double ratio = std::min(1.0, std::abs(pixel_temperature) * scale);
 
-                    auto scale_channel = [&ratio](std::uint8_t a) -> std::uint8_t {
-                        return static_cast<std::uint8_t>(std::lround(ratio * a));
+                    auto scale_channel = [&ratio](std::uint8_t a,
+                                                  std::uint8_t background) -> std::uint8_t {
+                        return static_cast<std::uint8_t>(
+                            std::lround(ratio * (a - background) + background));
                     };
 
                     std::size_t x = pixels_per_node * i + m + row_offset;
-                    std::size_t y = column_end - 1 - (pixels_per_node * j + n);
 
-                    Rgba8 pixel_color = {255, 255, 255, 255};
+                    const Rgba8 backgroud = {245, 245, 245, 255};
+
+                    Rgba8 pixel_color = backgroud;
 
                     if (pixel_temperature > 0) {
-                        pixel_color = {scale_channel(color_pos.r), scale_channel(color_pos.g),
-                                       scale_channel(color_pos.b), 255};
+                        pixel_color = {scale_channel(color_pos.r, backgroud.r),
+                                       scale_channel(color_pos.g, backgroud.g),
+                                       scale_channel(color_pos.b, backgroud.b), 255};
                     } else {
-                        pixel_color = {scale_channel(color_neg.r), scale_channel(color_neg.g),
-                                       scale_channel(color_neg.b), 255};
+                        pixel_color = {scale_channel(color_neg.r, backgroud.r),
+                                       scale_channel(color_neg.g, backgroud.g),
+                                       scale_channel(color_neg.b, backgroud.b), 255};
                     }
 
                     buffer.set_pixel(x, y, pixel_color);
