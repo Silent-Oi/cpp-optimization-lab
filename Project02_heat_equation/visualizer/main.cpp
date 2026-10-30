@@ -1,9 +1,10 @@
 #include <RGFW.h>
 
 #include <chrono>
-#include <thread>
+#include <cstdint>
 #include <cstdlib>
-
+#include <thread>
+#include <cstdio>
 #include "heat_diffusion.h"
 #include "heatmap_renderer.h"
 #include "pixel_buffer.h"
@@ -26,7 +27,7 @@ const heat_diffusion::Grid2D default_grid{
     1.0 / 511,
     1.0 / 511,
 };
-const heat_diffusion::InitialField default_field_type = heat_diffusion::InitialField::SineMode;
+const heat_diffusion::InitialField default_field_type = heat_diffusion::InitialField::Uniform;
 const double initial_temperature = -64;
 const double thermal_diffusivity = 1e-5;
 const double dt = 0.01;
@@ -34,8 +35,11 @@ const double dt = 0.01;
 constexpr int buffer_width = 1024;
 constexpr int buffer_height = 1024;
 visualizer::PixelBuffer buffer(buffer_width, buffer_height);
+std::int32_t mx = 0;
+std::int32_t my = 0;
+RGFW_event event;
 
-constexpr double real_simul_time_scale = 80;
+constexpr double real_simul_time_scale = 100;
 
 }  // namespace
 
@@ -48,8 +52,7 @@ int main() {
         work_field.make_numerical_workspace(thermal_diffusivity, dt);
 
     RGFW_window* window = RGFW_createWindow("heat_diffusion Visualizer", 0, 0, buffer_width,
-                                            buffer_height,
-                                            RGFW_windowCenter | RGFW_windowNoResize);
+                                            buffer_height, RGFW_windowCenter | RGFW_windowNoResize);
     if (window == nullptr) {
         RGFW_deinit();
         return 1;
@@ -97,12 +100,18 @@ int main() {
         previous_time = current_time;
         int steps = simulation_accumulator / dt;
         simulation_accumulator -= steps * dt;
+        //printf("%d\n", elapsed_seconds);
 
         if (!paused) {
-            work_field.numerical_solve_parallel(workspace, steps,4);
-
-            map_grid_to_buffer(work_field, buffer, std::abs(initial_temperature), light_red, light_blue);
+            work_field.numerical_solve_parallel(workspace, steps, 4);
+            map_grid_to_buffer(work_field, buffer, std::abs(initial_temperature), light_red,
+                               light_blue);
             RGFW_window_blitSurface(window, surface);
+            visualizer::test_mouse_position(window,event,mx,my);
+            visualizer::apply_heat_brush(window, event, mx, my, work_field, buffer, 1000000000.0,
+                                         real_simul_time_scale * elapsed_seconds,
+                                         thermal_diffusivity, 1);
+            ;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }

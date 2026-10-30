@@ -1,8 +1,11 @@
 #include "heatmap_renderer.h"
 
+#include <RGFW.h>
+
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <stdexcept>
 #include <vector>
@@ -10,6 +13,39 @@
 #include "heat_diffusion.h"
 #include "pixel_buffer.h"
 #include "state.h"
+
+namespace {
+
+static std::size_t map_buffer_to_grid(heat_diffusion::TemperatureField& field, PixelBuffer& buffer,
+                                      std::int32_t& mx, std::int32_t& my) {
+    const heat_diffusion::Grid2D& grid = field.get_grid();
+    const std::vector<double>& temperature = field.get_temperature();
+    const std::size_t nx = grid.nx;
+    const std::size_t ny = grid.ny;
+
+    const std::size_t buffer_width = buffer.width();
+    const std::size_t buffer_height = buffer.height();
+
+    const std::size_t pixels_per_node = std::min(buffer_width / nx, buffer_height / ny);
+    const double nodes_per_pixel = 1.0 / pixels_per_node;
+    const std::size_t row_offset = (buffer_width - (nx - 1) * pixels_per_node - 1) / 2;
+
+    const std::size_t column_offset = (buffer_height - (ny - 1) * pixels_per_node - 1) / 2;
+    const std::size_t column_end = column_offset + (ny * pixels_per_node);
+
+    std::size_t x = mx - row_offset;
+    std::size_t y = column_end - 1 - my;
+
+    return x / pixels_per_node + (y / pixels_per_node) * nx;
+}
+
+static double temperature_change_calu(const double brush_power, const double elapsed_seconds,
+                                 const double thermal_diffusivity, const double k) {
+    double heat = brush_power * elapsed_seconds;
+    return heat * thermal_diffusivity / k;
+}
+
+}  // namespace
 
 namespace visualizer {
 
@@ -96,6 +132,49 @@ void map_grid_to_buffer(heat_diffusion::TemperatureField& field, PixelBuffer& bu
                 }
             }
         }
+    }
+}
+
+void test_mouse_position(RGFW_window* window, RGFW_event& event, std::int32_t& mx,
+                         std::int32_t& my) {
+    if (RGFW_window_isMouseDown(window, RGFW_mouseLeft)) {
+        RGFW_window_getMouse(window, &mx, &my);
+        printf("You clicking at x: %d, y: %d\n", mx, my);
+    }
+
+    while (RGFW_window_checkEvent(window, &event)) {
+        RGFW_window_getMouse(window, &mx, &my);
+
+        if (event.type == RGFW_mouseButtonPressed && event.button.value == RGFW_mouseLeft) {
+            printf("You clicked at x: %d, y: %d\n", mx, my);
+        };
+    }
+}
+
+void apply_heat_brush(RGFW_window* window, RGFW_event& event, std::int32_t& mx, std::int32_t& my,
+                      heat_diffusion::TemperatureField& field, PixelBuffer& buffer,
+                      const double brush_power, const double elapsed_seconds,
+                      const double thermal_diffusivity, const double k) {
+    if (RGFW_window_isMouseDown(window, RGFW_mouseLeft)) {
+        RGFW_window_getMouse(window, &mx, &my);
+        double dT = temperature_change_calu(brush_power, elapsed_seconds, thermal_diffusivity, k);
+        std::size_t gird_index = map_buffer_to_grid(field, buffer, mx, my);
+        std::vector<double>& temperature = field.get_temperature();
+        printf("temperature: %f\n", temperature[gird_index]);
+        temperature[gird_index] += dT;
+
+        printf("temperature: %f\n", temperature[gird_index]);
+    }
+    if (RGFW_window_isMouseDown(window, RGFW_mouseRight)) {
+        RGFW_window_getMouse(window, &mx, &my);
+        double dT =
+            -1.0 * temperature_change_calu(brush_power, elapsed_seconds, thermal_diffusivity, k);
+        std::size_t gird_index = map_buffer_to_grid(field, buffer, mx, my);
+        std::vector<double>& temperature = field.get_temperature();
+        printf("temperature: %f\n", temperature[gird_index]);
+        temperature[gird_index] += dT;
+
+        printf("temperature: %f\n", temperature[gird_index]);
     }
 }
 
