@@ -27,7 +27,7 @@ const heat_diffusion::Grid2D default_grid{
     1.0 / 511,
     1.0 / 511,
 };
-const heat_diffusion::InitialField default_field_type = heat_diffusion::InitialField::Uniform;
+const heat_diffusion::InitialField default_field_type = heat_diffusion::InitialField::SineMode;
 const double initial_temperature = -64;
 const double thermal_diffusivity = 1e-5;
 const double dt = 0.01;
@@ -39,7 +39,7 @@ std::int32_t mx = 0;
 std::int32_t my = 0;
 RGFW_event event;
 
-constexpr double real_simul_time_scale = 100;
+constexpr double real_simul_time_scale = 50;
 
 }  // namespace
 
@@ -113,7 +113,7 @@ int main() {
                                          thermal_diffusivity, 1);
             ;
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        //std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     RGFW_surface_free(surface);
     RGFW_window_close(window);

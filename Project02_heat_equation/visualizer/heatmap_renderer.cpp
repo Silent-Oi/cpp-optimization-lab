@@ -16,8 +16,9 @@
 
 namespace {
 
-static std::size_t map_buffer_to_grid(heat_diffusion::TemperatureField& field, PixelBuffer& buffer,
-                                      std::int32_t& mx, std::int32_t& my) {
+static std::size_t map_buffer_to_grid(heat_diffusion::TemperatureField& field,
+                                      visualizer::PixelBuffer& buffer, std::int32_t& mx,
+                                      std::int32_t& my) {
     const heat_diffusion::Grid2D& grid = field.get_grid();
     const std::vector<double>& temperature = field.get_temperature();
     const std::size_t nx = grid.nx;
@@ -29,18 +30,22 @@ static std::size_t map_buffer_to_grid(heat_diffusion::TemperatureField& field, P
     const std::size_t pixels_per_node = std::min(buffer_width / nx, buffer_height / ny);
     const double nodes_per_pixel = 1.0 / pixels_per_node;
     const std::size_t row_offset = (buffer_width - (nx - 1) * pixels_per_node - 1) / 2;
-
+    const std::size_t row_end = row_offset + (nx * pixels_per_node);
     const std::size_t column_offset = (buffer_height - (ny - 1) * pixels_per_node - 1) / 2;
     const std::size_t column_end = column_offset + (ny * pixels_per_node);
 
-    std::size_t x = mx - row_offset;
-    std::size_t y = column_end - 1 - my;
+    std::size_t x =
+        std::min(std::max(static_cast<std::int64_t>(mx - row_offset), static_cast<std::int64_t>(0)),
+                  static_cast<std::int64_t>(pixels_per_node * nx - 1));
+    std::size_t y = std::min(
+        std::max(static_cast<std::int64_t>(column_end - 1 - my), static_cast<std::int64_t>(0)),
+        static_cast<std::int64_t>(pixels_per_node * ny - 1));
 
     return x / pixels_per_node + (y / pixels_per_node) * nx;
 }
 
 static double temperature_change_calu(const double brush_power, const double elapsed_seconds,
-                                 const double thermal_diffusivity, const double k) {
+                                      const double thermal_diffusivity, const double k) {
     double heat = brush_power * elapsed_seconds;
     return heat * thermal_diffusivity / k;
 }
