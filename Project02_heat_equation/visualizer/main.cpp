@@ -35,7 +35,7 @@ constexpr int buffer_width = 1024;
 constexpr int buffer_height = 1024;
 visualizer::PixelBuffer buffer(buffer_width, buffer_height);
 
-constexpr double real_simul_time_scale = 50;
+constexpr double real_simul_time_scale = 80;
 
 }  // namespace
 
@@ -76,7 +76,6 @@ int main() {
         if (RGFW_window_isKeyPressed(window, static_cast<RGFW_key>('r'))) {
             paused = true;
             work_field = initial_field;
-            buffer.clear();
             map_grid_to_buffer(work_field, buffer, initial_temperature, light_red, blue);
             RGFW_window_blitSurface(window, surface);
         }
@@ -84,7 +83,6 @@ int main() {
         if (RGFW_window_isKeyPressed(window, static_cast<RGFW_key>('n'))) {
             paused = true;
             work_field.numerical_solve_step(workspace);
-            buffer.clear();
             map_grid_to_buffer(work_field, buffer, initial_temperature, light_red, blue);
             work_field.get_temperature().swap(workspace.temperature_cache);
             RGFW_window_blitSurface(window, surface);
@@ -99,9 +97,9 @@ int main() {
         simulation_accumulator -= steps * dt;
 
         if (!paused) {
-            work_field.numerical_solve(workspace, steps);
-            buffer.clear();
-            map_grid_to_buffer(work_field, buffer, initial_temperature, light_red, blue);
+            work_field.numerical_solve_parallel(workspace, steps,4);
+
+            map_grid_to_buffer(work_field, buffer, std::abs(initial_temperature), light_red, light_blue);
             RGFW_window_blitSurface(window, surface);
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(1));

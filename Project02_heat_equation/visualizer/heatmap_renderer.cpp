@@ -3,9 +3,10 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <stdexcept>
 #include <vector>
-#include <cstdlib>
+
 #include "heat_diffusion.h"
 #include "pixel_buffer.h"
 #include "state.h"
@@ -19,7 +20,7 @@ double bilinear_interpolate(const double t00, const double t10, const double t01
 
 void map_grid_to_buffer(heat_diffusion::TemperatureField& field, PixelBuffer& buffer,
                         const double color_scale, const Rgba8& color_pos, const Rgba8& color_neg) {
-    const heat_diffusion::Grid2D grid = field.get_grid();
+    const heat_diffusion::Grid2D& grid = field.get_grid();
     const std::vector<double>& temperature = field.get_temperature();
     const std::size_t nx = grid.nx;
     const std::size_t ny = grid.ny;
@@ -42,21 +43,23 @@ void map_grid_to_buffer(heat_diffusion::TemperatureField& field, PixelBuffer& bu
     const std::size_t column_end = column_offset + (ny * pixels_per_node);
 
     for (std::size_t j = 0; j < ny - 1; j++) {
-        for (std::size_t n = 0; n <= pixels_per_node; n++) {
+        const std::size_t n_count = pixels_per_node + (j == ny - 2 ? 1 : 0);
+        for (std::size_t n = 0; n < n_count; n++) {
+            const double ty = n * nodes_per_pixel;
             for (std::size_t i = 0; i < nx - 1; i++) {
-                for (std::size_t m = 0; m <= pixels_per_node; m++) {
-                    std::size_t gird_index1 = j * nx + i;
-                    std::size_t gird_index3 = gird_index1 + nx;
-                    std::size_t gird_index2 = gird_index1 + 1;
-                    std::size_t gird_index4 = gird_index3 + 1;
+                const std::size_t m_count = pixels_per_node + (i == nx - 2 ? 1 : 0);
+                std::size_t gird_index1 = j * nx + i;
+                std::size_t gird_index3 = gird_index1 + nx;
+                std::size_t gird_index2 = gird_index1 + 1;
+                std::size_t gird_index4 = gird_index3 + 1;
 
-                    const double temperature1 = temperature[gird_index1];
-                    const double temperature2 = temperature[gird_index2];
-                    const double temperature3 = temperature[gird_index3];
-                    const double temperature4 = temperature[gird_index4];
+                const double temperature1 = temperature[gird_index1];
+                const double temperature2 = temperature[gird_index2];
+                const double temperature3 = temperature[gird_index3];
+                const double temperature4 = temperature[gird_index4];
 
+                for (std::size_t m = 0; m < m_count; m++) {
                     const double tx = m * nodes_per_pixel;
-                    const double ty = n * nodes_per_pixel;
 
                     const double pixel_temperature = bilinear_interpolate(
                         temperature1, temperature2, temperature3, temperature4, tx, ty);
@@ -72,7 +75,7 @@ void map_grid_to_buffer(heat_diffusion::TemperatureField& field, PixelBuffer& bu
 
                     Rgba8 pixel_color = {255, 255, 255, 255};
 
-                    if (pixel_temperature >= 0) {
+                    if (pixel_temperature > 0) {
                         pixel_color = {scale_channel(color_pos.r), scale_channel(color_pos.g),
                                        scale_channel(color_pos.b), 255};
                     } else {
