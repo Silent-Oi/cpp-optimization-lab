@@ -2,9 +2,10 @@
 
 #include <chrono>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <thread>
-#include <cstdio>
+
 #include "heat_diffusion.h"
 #include "heatmap_renderer.h"
 #include "pixel_buffer.h"
@@ -12,28 +13,30 @@
 
 namespace {
 
-const visualizer::Rgba8 blue{0, 180, 255, 255};     // 青蓝
-const visualizer::Rgba8 light{220, 240, 255, 255};  // 亮白蓝
-const visualizer::Rgba8 gold{255, 220, 80, 255};    // 金黄
-const visualizer::Rgba8 white{255, 255, 255, 255};
-const visualizer::Rgba8 black{0, 0, 0, 255};
-const visualizer::Rgba8 light_blue{100, 190, 255, 255};
-const visualizer::Rgba8 mid_white{245, 245, 245, 255};  // 暖白：中阻尼
-const visualizer::Rgba8 light_red{255, 125, 135, 255};  // 浅红：高阻尼
+constexpr visualizer::Rgba8 blue{0, 180, 255, 255};  // 青蓝
+constexpr visualizer::Rgba8 light{220, 240, 255, 255};  // 亮白蓝
+constexpr visualizer::Rgba8 gold{255, 220, 80, 255};    // 金黄
+constexpr visualizer::Rgba8 white{255, 255, 255, 255};
+constexpr visualizer::Rgba8 black{0, 0, 0, 255};
+constexpr visualizer::Rgba8 light_blue{100, 190, 255, 255};
+constexpr visualizer::Rgba8 mid_white{245, 245, 245, 255};  // 暖白：中阻尼
+constexpr visualizer::Rgba8 light_red{255, 125, 135, 255};  // 浅红：高阻尼
 
-const heat_diffusion::Grid2D default_grid{
+constexpr heat_diffusion::Grid2D default_grid{
     512,
     512,
     1.0 / 511,
     1.0 / 511,
 };
-const heat_diffusion::InitialField default_field_type = heat_diffusion::InitialField::SineMode;
-const double initial_temperature = -64;
-const double thermal_diffusivity = 1e-5;
-const double dt = 0.01;
+constexpr heat_diffusion::InitialField default_field_type = heat_diffusion::InitialField::SineMode;
+constexpr double initial_temperature = -64.0;
+constexpr double thermal_diffusivity = 1.0e-5;
+constexpr double brush_power = 1000000000;
+constexpr double dt = 0.01;
+constexpr double k = 1;
 
-constexpr int buffer_width = 1024;
-constexpr int buffer_height = 1024;
+constexpr int buffer_width = 1424;
+constexpr int buffer_height = 1424;
 visualizer::PixelBuffer buffer(buffer_width, buffer_height);
 std::int32_t mx = 0;
 std::int32_t my = 0;
@@ -100,20 +103,20 @@ int main() {
         previous_time = current_time;
         int steps = simulation_accumulator / dt;
         simulation_accumulator -= steps * dt;
-        //printf("%d\n", elapsed_seconds);
+        // printf("%d\n", elapsed_seconds);
 
         if (!paused) {
+            double time = steps * dt;
+            visualizer::apply_heat_brush(window, mx, my, work_field, buffer, brush_power,
+                                         time,
+                                         thermal_diffusivity, k);
             work_field.numerical_solve_parallel(workspace, steps, 4);
             map_grid_to_buffer(work_field, buffer, std::abs(initial_temperature), light_red,
                                light_blue);
             RGFW_window_blitSurface(window, surface);
-            visualizer::test_mouse_position(window,event,mx,my);
-            visualizer::apply_heat_brush(window, event, mx, my, work_field, buffer, 1000000000.0,
-                                         real_simul_time_scale * elapsed_seconds,
-                                         thermal_diffusivity, 1);
-            ;
+            // visualizer::test_mouse_position(window,event,mx,my);
         }
-        //std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        //std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
     RGFW_surface_free(surface);
     RGFW_window_close(window);

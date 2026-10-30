@@ -16,32 +16,61 @@
 
 namespace {
 
-static std::size_t map_buffer_to_grid(heat_diffusion::TemperatureField& field,
-                                      visualizer::PixelBuffer& buffer, std::int32_t& mx,
-                                      std::int32_t& my) {
-    const heat_diffusion::Grid2D& grid = field.get_grid();
-    const std::vector<double>& temperature = field.get_temperature();
+static visualizer::HeatmapBounds compute_heatmap_bounds(const heat_diffusion::Grid2D& grid,
+                                                        const visualizer::PixelBuffer& buffer) {
     const std::size_t nx = grid.nx;
     const std::size_t ny = grid.ny;
-
     const std::size_t buffer_width = buffer.width();
     const std::size_t buffer_height = buffer.height();
-
     const std::size_t pixels_per_node = std::min(buffer_width / nx, buffer_height / ny);
-    const double nodes_per_pixel = 1.0 / pixels_per_node;
-    const std::size_t row_offset = (buffer_width - (nx - 1) * pixels_per_node - 1) / 2;
-    const std::size_t row_end = row_offset + (nx * pixels_per_node);
-    const std::size_t column_offset = (buffer_height - (ny - 1) * pixels_per_node - 1) / 2;
-    const std::size_t column_end = column_offset + (ny * pixels_per_node);
+    if (pixels_per_node == 0) {
+        throw std::invalid_argument("画布太小了");
+    }
 
-    std::size_t x =
-        std::min(std::max(static_cast<std::int64_t>(mx - row_offset), static_cast<std::int64_t>(0)),
-                  static_cast<std::int64_t>(pixels_per_node * nx - 1));
-    std::size_t y = std::min(
-        std::max(static_cast<std::int64_t>(column_end - 1 - my), static_cast<std::int64_t>(0)),
-        static_cast<std::int64_t>(pixels_per_node * ny - 1));
+    const std::size_t row_pixel = (nx - 1) * pixels_per_node + 1;
+    const std::size_t colunm_pixel = (ny - 1) * pixels_per_node + 1;
 
-    return x / pixels_per_node + (y / pixels_per_node) * nx;
+    const std::size_t row_begin = (buffer_width - row_pixel) / 2;
+    const std::size_t row_end = row_begin + row_pixel - 1;
+
+    const std::size_t column_end = (buffer_height - (ny - 1) * pixels_per_node - 1) / 2;
+    const std::size_t column_begin = column_end + colunm_pixel - 1;
+
+    return {
+        row_begin,
+        row_end,
+        column_begin,
+        column_end,
+    };
+}
+
+static std::size_t map_buffer_to_grid(const heat_diffusion::TemperatureField& field,
+                                      const visualizer::PixelBuffer& buffer, std::int32_t mx,
+                                      std::int32_t my) {
+    const heat_diffusion::Grid2D& grid = field.get_grid();
+    const std::size_t nx = grid.nx;
+    const std::size_t ny = grid.ny;
+    const std::size_t buffer_width = buffer.width();
+    const std::size_t buffer_height = buffer.height();
+    const std::size_t pixels_per_node = std::min(buffer_width / nx, buffer_height / ny);
+    const visualizer::HeatmapBounds bounds = compute_heatmap_bounds(grid, buffer);
+
+    if (mx <= bounds.row_begin || my >= bounds.column_begin || mx >= bounds.row_end ||
+        my <= bounds.column_end) {
+        return 0;
+    }
+
+    std::size_t x = mx - bounds.row_begin;
+    std::size_t y = bounds.column_begin - my;
+
+    std::size_t i = x / pixels_per_node;
+    std::size_t j = y / pixels_per_node;
+
+    if (i > nx - 2 || j > ny - 2 || i < 1 || j < 1) {
+        return 0;
+    }
+
+    return i + j * nx;
 }
 
 static double temperature_change_calu(const double brush_power, const double elapsed_seconds,
@@ -61,6 +90,10 @@ double bilinear_interpolate(const double t00, const double t10, const double t01
 
 void map_grid_to_buffer(heat_diffusion::TemperatureField& field, PixelBuffer& buffer,
                         double color_scale, const Rgba8& color_pos, const Rgba8& color_neg) {
+    if (color_scale <= 0) {
+        throw std::invalid_argument("色标值出错");
+    }
+
     const heat_diffusion::Grid2D& grid = field.get_grid();
     const std::vector<double>& temperature = field.get_temperature();
     const std::size_t nx = grid.nx;
@@ -79,16 +112,13 @@ void map_grid_to_buffer(heat_diffusion::TemperatureField& field, PixelBuffer& bu
 
     const double nodes_per_pixel = 1.0 / pixels_per_node;
 
-    const std::size_t row_offset = (buffer_width - (nx - 1) * pixels_per_node - 1) / 2;
-
-    const std::size_t column_offset = (buffer_height - (ny - 1) * pixels_per_node - 1) / 2;
-    const std::size_t column_end = column_offset + (ny * pixels_per_node);
+    const HeatmapBounds bounds = compute_heatmap_bounds(grid, buffer);
 
     for (std::size_t j = 0; j < ny - 1; j++) {
         const std::size_t n_count = pixels_per_node + (j == ny - 2 ? 1 : 0);
 
         for (std::size_t n = 0; n < n_count; n++) {
-            std::size_t y = column_end - 1 - (pixels_per_node * j + n);
+            std::size_t y = bounds.column_begin - (pixels_per_node * j + n);
 
             const double ty = n * nodes_per_pixel;
             for (std::size_t i = 0; i < nx - 1; i++) {
@@ -117,7 +147,7 @@ void map_grid_to_buffer(heat_diffusion::TemperatureField& field, PixelBuffer& bu
                             std::lround(ratio * (a - background) + background));
                     };
 
-                    std::size_t x = pixels_per_node * i + m + row_offset;
+                    std::size_t x = pixels_per_node * i + m + bounds.row_begin;
 
                     const Rgba8 backgroud = {245, 245, 245, 255};
 
@@ -156,31 +186,38 @@ void test_mouse_position(RGFW_window* window, RGFW_event& event, std::int32_t& m
     }
 }
 
-void apply_heat_brush(RGFW_window* window, RGFW_event& event, std::int32_t& mx, std::int32_t& my,
-                      heat_diffusion::TemperatureField& field, PixelBuffer& buffer,
-                      const double brush_power, const double elapsed_seconds,
-                      const double thermal_diffusivity, const double k) {
+void apply_heat_brush(RGFW_window* window, std::int32_t& mx, std::int32_t& my,
+                      heat_diffusion::TemperatureField& field, const PixelBuffer& buffer,
+                      const double brush_power, const double time, const double thermal_diffusivity,
+                      const double k) {
     if (RGFW_window_isMouseDown(window, RGFW_mouseLeft)) {
         RGFW_window_getMouse(window, &mx, &my);
-        double dT = temperature_change_calu(brush_power, elapsed_seconds, thermal_diffusivity, k);
+        heat_diffusion::Grid2D grid = field.get_grid();
+        const double volume = grid.dx * grid.dy;
+        double dT = temperature_change_calu(brush_power, time, thermal_diffusivity, k);
         std::size_t gird_index = map_buffer_to_grid(field, buffer, mx, my);
-        std::vector<double>& temperature = field.get_temperature();
-        printf("temperature: %f\n", temperature[gird_index]);
-        temperature[gird_index] += dT;
 
-        printf("temperature: %f\n", temperature[gird_index]);
+        // printf("temperature: %f\n", temperature[gird_index]);
+        if (gird_index) {
+            std::vector<double>& temperature = field.get_temperature();
+            temperature[gird_index] += dT;
+        }
+
+        // printf("temperature: %f\n", temperature[gird_index]);
     }
     if (RGFW_window_isMouseDown(window, RGFW_mouseRight)) {
         RGFW_window_getMouse(window, &mx, &my);
+        heat_diffusion::Grid2D grid = field.get_grid();
+        const double volume = grid.dx * grid.dy;
         double dT =
-            -1.0 * temperature_change_calu(brush_power, elapsed_seconds, thermal_diffusivity, k);
+            -1.0 * temperature_change_calu(brush_power, time, thermal_diffusivity, k);
         std::size_t gird_index = map_buffer_to_grid(field, buffer, mx, my);
-        std::vector<double>& temperature = field.get_temperature();
-        printf("temperature: %f\n", temperature[gird_index]);
-        temperature[gird_index] += dT;
+        if (gird_index) {
+            std::vector<double>& temperature = field.get_temperature();
+            temperature[gird_index] += dT;
 
-        printf("temperature: %f\n", temperature[gird_index]);
+            // printf("temperature: %f\n", temperature[gird_index]);
+        }
     }
 }
-
 }  // namespace visualizer
