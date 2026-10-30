@@ -38,8 +38,9 @@ target_link_libraries(heat_tests
 )
 
 add_executable(heat_visualizer
+    visualizer/main.cpp
     visualizer/pixel_buffer.cpp
- "visualizer/heatmap_renderer.h" "visualizer/heatmap_renderer.cpp")
+ "visualizer/heatmap_renderer.h" "visualizer/heatmap_renderer.cpp" "visualizer/rgfw_impl.cpp")
 
 target_include_directories(heat_visualizer
     PRIVATE

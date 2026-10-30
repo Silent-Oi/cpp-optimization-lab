@@ -4,15 +4,21 @@
 #include <cmath>
 #include <cstdint>
 #include <stdexcept>
-
+#include <vector>
+#include <cstdlib>
 #include "heat_diffusion.h"
 #include "pixel_buffer.h"
 #include "state.h"
 
 namespace visualizer {
 
+double bilinear_interpolate(const double t00, const double t10, const double t01, const double t11,
+                            const double tx, double ty) {
+    return (1 - tx) * (1 - ty) * t00 + tx * (1 - ty) * t10 + (1 - tx) * ty * t01 + tx * ty * t11;
+}
+
 void map_grid_to_buffer(heat_diffusion::TemperatureField& field, PixelBuffer& buffer,
-                        const double color_scale, const Rgba8& color_max, const Rgba8& color_min) {
+                        const double color_scale, const Rgba8& color_pos, const Rgba8& color_neg) {
     const heat_diffusion::Grid2D grid = field.get_grid();
     const std::vector<double>& temperature = field.get_temperature();
     const std::size_t nx = grid.nx;
@@ -44,52 +50,37 @@ void map_grid_to_buffer(heat_diffusion::TemperatureField& field, PixelBuffer& bu
                     std::size_t gird_index2 = gird_index1 + 1;
                     std::size_t gird_index4 = gird_index3 + 1;
 
-                    double dist1 = std::sqrt((m * nodes_per_pixel) * (m * nodes_per_pixel) +
-                                             (n * nodes_per_pixel) * (n * nodes_per_pixel));
-                    double dist2 = std::sqrt((1 - m * nodes_per_pixel) * (1 - m * nodes_per_pixel) +
-                                             (n * nodes_per_pixel) * (n * nodes_per_pixel));
-                    double dist3 = std::sqrt((m * nodes_per_pixel) * (m * nodes_per_pixel) +
-                                             (1 - n * nodes_per_pixel) * (1 - n * nodes_per_pixel));
-                    double dist4 = std::sqrt((1 - m * nodes_per_pixel) * (1 - m * nodes_per_pixel) +
-                                             (1 - n * nodes_per_pixel) * (1 - n * nodes_per_pixel));
+                    const double temperature1 = temperature[gird_index1];
+                    const double temperature2 = temperature[gird_index2];
+                    const double temperature3 = temperature[gird_index3];
+                    const double temperature4 = temperature[gird_index4];
 
-                    auto lerp_channel = [&color_scale](const double temperature, const double dist,
-                                                       std::uint8_t channel_pos,
-                                                       std::uint8_t channel_neg) {
-                        if (temperature >= 0) {
-                            return std::min(temperature / color_scale, 1.0) *
-                                   std::max((1.0 - dist), 0.0) * channel_pos;
-                        } else {
-                            return std::min(-1.0 * temperature / color_scale, 1.0) *
-                                   std::max((1.0 - dist), 0.0) * channel_neg;
-                        }
+                    const double tx = m * nodes_per_pixel;
+                    const double ty = n * nodes_per_pixel;
+
+                    const double pixel_temperature = bilinear_interpolate(
+                        temperature1, temperature2, temperature3, temperature4, tx, ty);
+
+                    const double ratio = std::min(1.0, std::abs(pixel_temperature) / color_scale);
+
+                    auto scale_channel = [&ratio](std::uint8_t a) -> std::uint8_t {
+                        return static_cast<std::uint8_t>(std::lround(ratio * a));
                     };
-
-                    std::uint8_t a = 255;
-                    std::uint8_t r =
-                        (lerp_channel(temperature[gird_index1], dist1, color_max.r, color_min.r) +
-                         lerp_channel(temperature[gird_index2], dist2, color_max.r, color_min.r) +
-                         lerp_channel(temperature[gird_index3], dist3, color_max.r, color_min.r) +
-                         lerp_channel(temperature[gird_index4], dist4, color_max.r, color_min.r)) /
-                        4;
-                    std::uint8_t g =
-                        (lerp_channel(temperature[gird_index1], dist1, color_max.g, color_min.g) +
-                         lerp_channel(temperature[gird_index2], dist2, color_max.g, color_min.g) +
-                         lerp_channel(temperature[gird_index3], dist3, color_max.g, color_min.g) +
-                         lerp_channel(temperature[gird_index4], dist4, color_max.g, color_min.g)) /
-                        4;
-                    std::uint8_t b =
-                        (lerp_channel(temperature[gird_index1], dist1, color_max.b, color_min.b) +
-                         lerp_channel(temperature[gird_index2], dist2, color_max.b, color_min.b) +
-                         lerp_channel(temperature[gird_index3], dist3, color_max.b, color_min.b) +
-                         lerp_channel(temperature[gird_index4], dist4, color_max.b, color_min.b)) /
-                        4;
-                    Rgba8 lerp_color{r, g, b, a};
 
                     std::size_t x = pixels_per_node * i + m + row_offset;
                     std::size_t y = column_end - 1 - (pixels_per_node * j + n);
 
-                    buffer.set_pixel(x, y, lerp_color);
+                    Rgba8 pixel_color = {255, 255, 255, 255};
+
+                    if (pixel_temperature >= 0) {
+                        pixel_color = {scale_channel(color_pos.r), scale_channel(color_pos.g),
+                                       scale_channel(color_pos.b), 255};
+                    } else {
+                        pixel_color = {scale_channel(color_neg.r), scale_channel(color_neg.g),
+                                       scale_channel(color_neg.b), 255};
+                    }
+
+                    buffer.set_pixel(x, y, pixel_color);
                 }
             }
         }

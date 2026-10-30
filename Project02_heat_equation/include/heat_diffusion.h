@@ -14,7 +14,7 @@ class TemperatureField {
                      double initial_temperature);
     NuemricalWorkspace make_numerical_workspace(double thermal_diffusivity, double dt) const;
     const Grid2D& get_grid() const;
-    const std::vector<double>& get_temperature() const;
+    std::vector<double>& get_temperature();
 
     void numerical_solve_step(NuemricalWorkspace& workspace);
     void numerical_solve_step(NuemricalWorkspace& workspace, const std::size_t begin,

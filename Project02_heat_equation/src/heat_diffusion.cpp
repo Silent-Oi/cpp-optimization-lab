@@ -97,7 +97,7 @@ const Grid2D& TemperatureField::get_grid() const {
     return grid_;
 }
 
-const std::vector<double>& TemperatureField::get_temperature() const {
+std::vector<double>& TemperatureField::get_temperature(){
     return temperature_;
 }
 

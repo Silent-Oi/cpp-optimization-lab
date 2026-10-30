@@ -1,7 +1,6 @@
 #pragma once
-#include <vector>
-#include <cmath>
 
+#include <cmath>
 namespace heat_diffusion {
 
 void test_numerical_solve_step(const double thermal_diffusivity, const double dt, double tolerance);
