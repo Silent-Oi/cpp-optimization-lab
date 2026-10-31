@@ -25,6 +25,7 @@ struct HeatDiffusionConfig {
     int experiment_count;
     double dt;
     std::size_t max_threads;
+    int threads_per_block;
 };
 
 heat_diffusion::Grid2D default_grid{
@@ -36,9 +37,19 @@ heat_diffusion::Grid2D default_grid{
 
 // 默认设置时间步 dt <= 0.09537
 HeatDiffusionConfig default_config{
-    default_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 512, 12, 0.01, 12};
+    default_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 512, 12, 0.01, 12, 256,
+};
 
-enum class ExperimentType { UnstableTimeStep, GridRefinement, TimeStepRefinement };
+enum class ErrorExperimentType {
+    UnstableTimeStep,
+    GridRefinement,
+    TimeStepRefinement,
+    CudaAccuracy
+};
+enum class PerformanceExperimentType {
+    Parallel,
+    Cuda,
+};
 
 struct ErrorMetrics {
     double mean_absolute_error;
@@ -87,7 +98,8 @@ namespace error_experiment {
 // ---- 稳定性要求实验设置 --------------------------------------------------------------
 
 HeatDiffusionConfig unstable_dt_config{
-    default_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 1, 9, 0.25, 12};
+    default_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 1, 9, 0.25, 12, 256,
+};
 
 // ---- 网格缩放实验设置 --------------------------------------------------------------
 
@@ -99,7 +111,16 @@ heat_diffusion::Grid2D grid_refinement_grid{
 };
 
 HeatDiffusionConfig grid_refinement_config{
-    grid_refinement_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 16, 11, 0.000001, 12};
+    grid_refinement_grid,
+    heat_diffusion::InitialField::SineMode,
+    128,
+    1e-5,
+    16,
+    11,
+    0.000001,
+    12,
+    256,
+};
 
 // ---- 时间步缩放实验设置 --------------------------------------------------------------
 
@@ -111,7 +132,29 @@ heat_diffusion::Grid2D time_step_refinement_grid{
 };
 
 HeatDiffusionConfig time_step_refinement_config{
-    time_step_refinement_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 64, 8, 0.01, 12};
+    time_step_refinement_grid,
+    heat_diffusion::InitialField::SineMode,
+    128,
+    1e-5,
+    64,
+    8,
+    0.01,
+    12,
+    256,
+};
+
+// ---- Cuda实验设置 --------------------------------------------------------------
+
+heat_diffusion::Grid2D cuda_accuracy_grid{
+    512,
+    512,
+    1.0 / 511,
+    1.0 / 511,
+};
+
+HeatDiffusionConfig cuda_accuracy_config{
+    cuda_accuracy_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 64, 8, 0.01, 12, 256,
+};
 
 // ---- 误差计算 --------------------------------------------------------------
 
@@ -132,14 +175,33 @@ static ErrorMetrics benchmark(const int steps, const double dt, const double the
     return compute_error_metrics(analyticall_result, numerical_result);
 }
 
+static ErrorMetrics benchmark_cuda(
+    const int steps, const double dt, const double thermal_diffusivity,
+    const heat_diffusion::TemperatureField& initial_temperature_field,
+    const int threads_per_block) {
+    double time = dt * steps;
+
+    heat_diffusion::TemperatureField numerical_temperature_field = initial_temperature_field;
+    heat_diffusion::TemperatureField analytical_temperature_field = initial_temperature_field;
+
+    heat_diffusion::NuemricalWorkspace workspace =
+        numerical_temperature_field.make_numerical_workspace(thermal_diffusivity, dt);
+    numerical_temperature_field.numerical_solve_cuda(workspace, steps, threads_per_block);
+    analytical_temperature_field.analytical_solve(thermal_diffusivity, time);
+    const std::vector<double>& numerical_result = numerical_temperature_field.get_temperature();
+    const std::vector<double>& analyticall_result = analytical_temperature_field.get_temperature();
+
+    return compute_error_metrics(analyticall_result, numerical_result);
+}
+
 // ---- 实验类型选择 --------------------------------------------------------------
 
 static ErrorMetrics run_mode(HeatDiffusionConfig& benchmark_config,
-                             const ExperimentType& experiment_type,
+                             const ErrorExperimentType& experiment_type,
                              heat_diffusion::TemperatureField& initial_temperature_field,
                              std::ofstream& csv) {
     switch (experiment_type) {
-        case ExperimentType::UnstableTimeStep: {
+        case ErrorExperimentType::UnstableTimeStep: {
             benchmark_config.steps = benchmark_config.steps * 2;
             std::cout << "steps: " << benchmark_config.steps << '\n';
 
@@ -150,7 +212,7 @@ static ErrorMetrics run_mode(HeatDiffusionConfig& benchmark_config,
                              benchmark_config.thermal_diffusivity, initial_temperature_field);
         }
 
-        case ExperimentType::GridRefinement: {
+        case ErrorExperimentType::GridRefinement: {
             benchmark_config.gird.nx = benchmark_config.gird.nx * 2 - 1;
             benchmark_config.gird.ny = benchmark_config.gird.ny * 2 - 1;
             benchmark_config.gird.dx = 1.0 / (benchmark_config.gird.nx - 1);
@@ -167,7 +229,7 @@ static ErrorMetrics run_mode(HeatDiffusionConfig& benchmark_config,
                              benchmark_config.thermal_diffusivity, initial_temperature_field);
         }
 
-        case ExperimentType::TimeStepRefinement: {
+        case ErrorExperimentType::TimeStepRefinement: {
             benchmark_config.dt = benchmark_config.dt * 0.5;
             benchmark_config.steps = benchmark_config.steps * 2;
             std::cout << "dt: " << benchmark_config.dt << '\n';
@@ -175,6 +237,17 @@ static ErrorMetrics run_mode(HeatDiffusionConfig& benchmark_config,
                 << benchmark_config.steps << ',';
             return benchmark(benchmark_config.steps, benchmark_config.dt,
                              benchmark_config.thermal_diffusivity, initial_temperature_field);
+        }
+
+        case ErrorExperimentType::CudaAccuracy: {
+            benchmark_config.steps = benchmark_config.steps * 2;
+            std::cout << "steps: " << benchmark_config.steps << '\n';
+            csv << ' ' << ',' << ' ' << ',' << ' ' << ',' << ' ' << ',' << benchmark_config.steps
+                << ',';
+
+            return benchmark_cuda(benchmark_config.steps, benchmark_config.dt,
+                                  benchmark_config.thermal_diffusivity, initial_temperature_field,
+                                  benchmark_config.threads_per_block);
         }
     }
     throw std::invalid_argument("错误的实验类型");
@@ -184,7 +257,7 @@ static ErrorMetrics run_mode(HeatDiffusionConfig& benchmark_config,
 
 static void run(const std::string& data, const std::string& experiment_name,
                 const std::string& filename, const HeatDiffusionConfig& experience_config,
-                const ExperimentType experiment_type) {
+                const ErrorExperimentType experiment_type) {
     if (experience_config.initial_field_type != heat_diffusion::InitialField::SineMode) {
         throw std::invalid_argument("暂不支持其他场");
     }
@@ -294,13 +367,90 @@ static void run(const std::string& data, const std::string& experiment_name,
 
 }  // namespace parallel_experiment
 
+// ============================================================================
+// Cuda实验
+// ============================================================================
+
+namespace cuda_experiment {
+
+heat_diffusion::Grid2D cuda_grid{
+    512,
+    512,
+    1.0 / 511,
+    1.0 / 511,
+};
+
+HeatDiffusionConfig cuda_config{
+    cuda_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 512, 6, 0.01, 12, 12,
+};
+
+
+static double benchmark(heat_diffusion::TemperatureField& bench_field,
+                        heat_diffusion::NuemricalWorkspace& workspace, const int steps,
+                        const int threads_per_block) {
+    const auto start = std::chrono::steady_clock::now();
+    bench_field.numerical_solve_cuda(workspace, steps, threads_per_block);
+    const auto end = std::chrono::steady_clock::now();
+    return std::chrono::duration<double>(end - start).count();
+}
+
+static void run(const std::string& data, const std::string& experiment_name,
+                const std::string& filename, const HeatDiffusionConfig& experience_config) {
+    std::ofstream csv =
+        common::create_result_csv(PROJECT02_SOURCE_DIR, data, experiment_name, filename);
+    csv << "threads,nx,ny,thermal_diffusivity,dt,steps,ns_per_calu\n";
+
+    std::cout << std::setprecision(10);
+    csv << std::setprecision(10);
+
+    std::size_t threads_per_block = experience_config.threads_per_block;
+    std::size_t calu_counts =
+        experience_config.gird.nx * experience_config.gird.ny * experience_config.steps;
+    std::size_t experiment_count = experience_config.experiment_count;
+
+    heat_diffusion::TemperatureField initial_field(experience_config.gird,
+                                                   experience_config.initial_field_type,
+                                                   experience_config.initial_temperature);
+
+    heat_diffusion::TemperatureField bench_field = initial_field;
+
+    heat_diffusion::NuemricalWorkspace workspace = bench_field.make_numerical_workspace(
+        experience_config.thermal_diffusivity, experience_config.dt);
+
+    // 输出基础信息
+    std::cout << "*******************     BENTCHMARK     *********************" << '\n';
+    std::cout << "dx: " << experience_config.gird.dx << '\n';
+    std::cout << "dy: " << experience_config.gird.dy << '\n';
+    std::cout << "thermal_diffusivity: " << experience_config.thermal_diffusivity << '\n';
+    std::cout << "dt: " << experience_config.dt << '\n';
+    std::cout << "steps: " << experience_config.steps << '\n';
+    std::cout << "*******************          *********************" << '\n';
+    std::cout << '\n';
+
+    for (std::size_t i = 0; i < experiment_count; ++i) {
+        bench_field = initial_field;
+        double run_time_second =
+            benchmark(bench_field, workspace, experience_config.steps, threads_per_block);
+
+        double ns_per_calu = run_time_second * 1e9 / calu_counts;
+        std::cout << "threads_per_block: " << threads_per_block << '\n';
+        std::cout << "ns_per_calu: " << ns_per_calu << '\n';
+        std::cout << '\n';
+        csv << threads_per_block << ',' << experience_config.gird.nx << ','
+            << experience_config.gird.ny << ',' << experience_config.thermal_diffusivity << ','
+            << experience_config.dt << ',' << experience_config.steps << ',' << ns_per_calu << '\n';
+
+        threads_per_block = threads_per_block * 2;
+    }
+}
+}  // namespace cuda_experiment
 
 int main() {
     auto data = common::make_run_timestamp();
     std::string experiment_name = "parallel_experiment";
     std::string filename = "parallel_experiment";
 
-    const ExperimentType experiment_type = ExperimentType::TimeStepRefinement;
+    const ErrorExperimentType error_experiment_type = ErrorExperimentType::CudaAccuracy;
 
     parallel_experiment::run(data, experiment_name, filename, default_config);
 }

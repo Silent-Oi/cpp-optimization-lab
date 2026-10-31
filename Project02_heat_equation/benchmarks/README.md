@@ -1,5 +1,26 @@
 # Project02 数值实验
 
+## CUDA 与 CPU 对照绘图
+
+在仓库根目录运行：
+
+```powershell
+python Project02_heat_equation/benchmarks/scripts/plot_cuda_error_comparison.py
+python Project02_heat_equation/benchmarks/scripts/plot_cuda_performance_comparison.py
+```
+
+误差图默认读取 `error_experiment/results/` 的最新 `cuda_error_experiment` 和 `baseline_experiment`，分别在 MAE、RMSE 两张子图中比较 CPU/CUDA 各自相对解析解的误差。按 `nx,ny,thermal_diffusivity,dt,steps` 精确配对，CPU 多出的测量点省略，CUDA 缺少对应 CPU 数据时报告错误。两种误差指标相近不等于温度场逐点完全相同；当前 CSV 无法计算直接 CPU-CUDA 场差值。
+
+性能图分别读取 `cuda_experiment/` 中的最新 `cuda_experiment` 和 `parallel_experiment/results/` 中的最新 `parallel_experiment`，仅取 CPU 的 `threads=1` 记录作为基线。若 `cuda_experiment/results/` 存在，优先从该目录读取，否则使用当前平铺在 `cuda_experiment/` 根目录的结果。要求网格、扩散系数、时间步和步数一致，配置不符时拒绝计算加速比。当前 CPU 并行接口在 `threads=1` 时直接调用单线程求解器。
+
+性能图横轴是 CUDA 每 block 的线程数，不是 CPU 线程数或 GPU 总线程数。左图比较 `ns_per_calu`，其归一化分母为 `nx × ny × steps`；右图为 `CPU time / CUDA time`，大于 1 表示 CUDA 更快，小于 1 表示 CPU 更快。两图的纵轴均取对数以显示跨度较大的结果。每条记录是原始单次测量，不标作均值或中位数。
+
+当前 CUDA 数据使用主机时钟包住完整求解调用，每步包含设备分配、H2D/D2H 传输、kernel、同步及释放，结果显示求解调用成本，不能作为纯 kernel 性能。CPU 计时也包住求解调用，初始化和工作区准备在计时前。现有 CSV 无法拆分 kernel、传输及资源管理成本；脚本不重跑实验，也不验证历史构建配置和硬件条件。
+
+两个脚本顶部均可修改 `DEFAULT_EXPERIMENT`（CUDA 文件名前缀）和 `CPU_EXPERIMENT`，也支持 `--experiment`、`--cpu-experiment`；用 `--timestamp` 指定 CUDA 时间标识、`--cpu-timestamp` 指定 CPU 时间标识，`--show` 同时打开窗口。默认选择各自最新文件，不因配置不匹配而静默改用另一份历史结果。
+
+误差对照图保存在 `error_experiment/figures/`，性能对照图保存在 `cuda_experiment/figures/`，文件名包含 CUDA 和 CPU 的时间标识，图内也注明两次运行的时间标识。性能脚本顶部的 `CUDA_EXPERIMENT_DIR`、`CUDA_RESULTS_DIR`、`CPU_RESULTS_DIR`、`FIGURE_DIR` 集中配置目录；CUDA 标准结果目录存在时只在其中选择，不自动混入根目录的历史快照。
+
 ## 多线程实验绘图
 
 需要 Python 和 Matplotlib。在仓库根目录运行：

@@ -37,8 +37,12 @@ __global__ void heat_diffusion_step_kernel(double* old_temperature, double* new_
 
 namespace heat_diffusion {
 
-void launch_heat_diffusion_step(TemperatureField& field, NuemricalWorkspace& workspace,
-                                const int block_count, const int threads_per_block) {
+void launch_heat_diffusion_step(TemperatureField& field, NuemricalWorkspace& workspace, const int threads_per_block) {
+
+    if (threads_per_block <= 0 || threads_per_block > 1024) {
+        throw std::invalid_argument("线程数超了");
+    }
+
     const heat_diffusion::Grid2D& grid = field.get_grid();
     std::vector<double> temperature = field.get_temperature();
 
@@ -48,6 +52,9 @@ void launch_heat_diffusion_step(TemperatureField& field, NuemricalWorkspace& wor
     const double ry = workspace.ry;
     const double rc = workspace.rc;
 
+    const int block_count = (number_y * number_x + threads_per_block - 1) / threads_per_block;
+
+
     std::size_t temperature_bytes = temperature.size() * sizeof(double);
     double* old_temperature = nullptr;
     double* new_temperature = nullptr;
@@ -55,12 +62,16 @@ void launch_heat_diffusion_step(TemperatureField& field, NuemricalWorkspace& wor
     cudaError_t status = cudaMalloc(&old_temperature, temperature_bytes);
     if (status != cudaSuccess) {
         printf("%s\n", cudaGetErrorString(status));
+        cudaFree(old_temperature);
+        cudaFree(new_temperature);
         throw std::invalid_argument("报错了");
     }
 
     status = cudaMalloc(&new_temperature, temperature_bytes);
     if (status != cudaSuccess) {
         printf("%s\n", cudaGetErrorString(status));
+        cudaFree(old_temperature);
+        cudaFree(new_temperature);
         throw std::invalid_argument("报错了");
     }
 
@@ -68,6 +79,8 @@ void launch_heat_diffusion_step(TemperatureField& field, NuemricalWorkspace& wor
         cudaMemcpy(old_temperature, temperature.data(), temperature_bytes, cudaMemcpyHostToDevice);
     if (status != cudaSuccess) {
         printf("%s\n", cudaGetErrorString(status));
+        cudaFree(old_temperature);
+        cudaFree(new_temperature);
         throw std::invalid_argument("报错了");
     }
 
@@ -75,6 +88,8 @@ void launch_heat_diffusion_step(TemperatureField& field, NuemricalWorkspace& wor
                         cudaMemcpyHostToDevice);
     if (status != cudaSuccess) {
         printf("%s\n", cudaGetErrorString(status));
+        cudaFree(old_temperature);
+        cudaFree(new_temperature);
         throw std::invalid_argument("报错了");
     }
 
