@@ -1,9 +1,14 @@
 add_library(heat_core STATIC
     src/heat_diffusion.cpp
+    cuda/cuda_heat_diffusion.cu
+    cuda/cuda_heat_diffusion.h
 )
 
 target_include_directories(heat_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/cuda
+    PRIVATE
+        ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
 )
 target_link_libraries(heat_core PUBLIC cpp_lab_common)
 
@@ -13,6 +18,15 @@ target_compile_definitions(
         PROJECT02_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
+set_target_properties(heat_core PROPERTIES
+    CUDA_STANDARD 20
+    CUDA_STANDARD_REQUIRED ON
+    CUDA_EXTENSIONS OFF
+)
+
+target_compile_options(heat_core PRIVATE
+    "$<$<COMPILE_LANGUAGE:CUDA>:--utf-8>"
+)
 
 add_executable(heat_benchmark
     benchmarks/heat_benchmark.cpp
@@ -38,9 +52,12 @@ target_link_libraries(heat_tests
 )
 
 add_executable(heat_visualizer
-    visualizer/main.cpp
+    "visualizer/visualizer_main.cpp"
     visualizer/pixel_buffer.cpp
- "visualizer/heatmap_renderer.h" "visualizer/heatmap_renderer.cpp" "visualizer/rgfw_impl.cpp")
+    visualizer/heatmap_renderer.h
+    visualizer/heatmap_renderer.cpp
+    visualizer/rgfw_impl.cpp
+)
 
 target_include_directories(heat_visualizer
     PRIVATE
@@ -53,13 +70,23 @@ target_link_libraries(heat_visualizer
 )
 
 
+add_executable(cuda_basics
+    cuda/cuda_basics.cu
+)
+
+set_target_properties(cuda_basics PROPERTIES
+    CUDA_STANDARD 20
+    CUDA_STANDARD_REQUIRED ON
+    CUDA_EXTENSIONS OFF
+)
+target_include_directories(cuda_basics PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+
+
 if(MSVC)
-    target_compile_options(heat_core PRIVATE /Qvec-report:2 /FAsu)
-    target_compile_options(heat_core PRIVATE /utf-8)
+    target_compile_options(heat_core PRIVATE
+        "$<$<COMPILE_LANGUAGE:CXX>:/Qvec-report:2;/FAsu;/utf-8>"
+    )
     target_compile_options(heat_benchmark PRIVATE /utf-8)
     target_compile_options(heat_tests PRIVATE /utf-8)
     target_compile_options(heat_visualizer PRIVATE /utf-8)
 endif()
-
-# Add executable targets with the CPU implementation.
-# CUDA is introduced in stage 4; configuring the CPU workspace needs no toolkit.

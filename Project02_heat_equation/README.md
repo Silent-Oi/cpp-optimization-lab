@@ -2,7 +2,7 @@
 
 > Two-dimensional heat diffusion, numerical verification, and CPU/GPU execution.
 
-**状态：前三阶段已完成，具备 CPU 单线程与多线程差分推进、数值实验，以及带鼠标单点加热／冷却的温度场显示。下一阶段接入 CUDA 后端。**
+**状态：前三阶段已完成，具备 CPU 单线程与多线程差分推进、数值实验，以及带鼠标单点加热／冷却的温度场显示。当前推进 CUDA 基础实现与验证。**
 
 ## 项目成果
 
@@ -16,7 +16,7 @@
 
 六个阶段、完成边界和设计原则见 [技术路线](docs/roadmap.md)。
 
-已实现双线性温度插值、固定正负色标、RGFW 窗口、固定时间步推进及单节点温度交互。下一阶段以现有 CPU 结果为参考接入 CUDA；当前构建无需 CUDA Toolkit。
+已实现双线性温度插值、固定正负色标、RGFW 窗口、固定时间步推进及单节点温度交互。CPU 与 CUDA 实现统一接入 `heat_core`；构建本项目需要 CUDA Toolkit。
 
 ## 项目结构
 
@@ -37,7 +37,7 @@ Project02_heat_equation/
 └─ README.md
 ```
 
-CPU 核心、`heat_tests`、`heat_benchmark` 和 `heat_visualizer` 已接入构建；支持均匀场、单正弦场初始化，以及单线程和多线程 CPU 差分推进。CUDA 后端尚未实现。
+`heat_core`、`heat_tests`、`heat_benchmark` 和 `heat_visualizer` 已接入构建；支持均匀场、单正弦场初始化，以及单线程和多线程 CPU 差分推进。CUDA 基础实现已加入，完整的 CPU/GPU 数值对照与设备数据驻留仍在完善。
 
 ## 构建
 
@@ -49,7 +49,9 @@ Windows / MSVC x64 环境下，从仓库根目录执行：
 cmd.exe /d /c 'call "D:\Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat" && cmake -S . -B build\x64-Release -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build\x64-Release'
 ```
 
-当前 `heat_core` 是静态库 target，编译 `src/heat_diffusion.cpp`，可通过 `cmake --build build/x64-Release --target heat_core` 单独构建；`heat_tests` 用于当前数值对照。它们使用本项目与 `Project00_common` 的头文件路径，不依赖 Project01。后续添加示例入口；CUDA 配置在第四阶段接入。
+`heat_core` 是统一的静态库 target，包含 `src/heat_diffusion.cpp` 和 `cuda/cuda_heat_diffusion.cu`。CMake 分别用 C++ 与 CUDA 编译器编译，再归入同一个库；测试、benchmark 和显示程序均只需链接 `heat_core`。可通过 `cmake --build build/x64-Release --target heat_core` 单独构建；`heat_tests` 用于当前数值对照。这些目标不依赖 Project01。
+
+Windows CUDA 工具链、安装组件和单个 `.cu` 文件的编译命令见 [CUDA 开发环境](docs/cuda_windows.md)。Visual Studio 中可选择 `x64-02-Release` 或 `x64-02-Debug` 配置单独构建 P2；`cuda_basics` 保留为独立的入门程序。
 
 误差实验的绘图命令与输出说明见 [数值实验](benchmarks/README.md)。
 

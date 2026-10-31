@@ -2,9 +2,7 @@
 
 #include <chrono>
 #include <cstdint>
-#include <cstdio>
 #include <cstdlib>
-#include <thread>
 
 #include "heat_diffusion.h"
 #include "heatmap_renderer.h"

@@ -19,7 +19,7 @@
 
 批量计算大量参数不同的欠阻尼振子，包含 AoS/SoA、自动向量化、简单多线程、五组性能实验和相空间显示。已于 2026-10-09 正式结束，详见[项目评价与已知局限](Project01_batch_oscillator/docs/project_evaluation.md)。
 
-当前推进 [Project02 — CPU/CUDA Heat Equation](Project02_heat_equation/README.md)，已完成 CPU 单线程与多线程差分实现、数值与性能实验，以及带鼠标单点加热／冷却的温度场显示。前三阶段已完成，下一阶段引入 CUDA；当前构建无需 CUDA Toolkit。
+当前推进 [Project02 — CPU/CUDA Heat Equation](Project02_heat_equation/README.md)，已完成 CPU 单线程与多线程差分实现、数值与性能实验，以及带鼠标单点加热／冷却的温度场显示。前三阶段已完成，当前推进 CUDA 基础实现与验证；构建 Project02 需要 CUDA Toolkit。
 
 ## 技术路线
 

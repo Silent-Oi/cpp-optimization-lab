@@ -11,4 +11,8 @@ void test_numberical_solve_parallel(const double thermal_diffusivity, const int 
                                     const double dt, const std::size_t thread_cout,
                                     const double tolerance);
 
+void test_numerical_solve_step_cuda(const double thermal_diffusivity, const double dt,
+                                    const int block_count, const int threads_per_block,
+                                    const double tolerance);
+
 }  // namespace heat_diffusion

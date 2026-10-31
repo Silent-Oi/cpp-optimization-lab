@@ -1,5 +1,5 @@
 #include "heat_diffusion.h"
-
+#include "cuda_heat_diffusion.h"
 #include <algorithm>
 #include <barrier>
 #include <cmath>
@@ -8,7 +8,6 @@
 #include <thread>
 #include <utility>
 #include <vector>
-
 #include "state.h"
 
 namespace {
@@ -269,6 +268,26 @@ void TemperatureField::numerical_solve_parallel(NuemricalWorkspace& workspace, c
         worker.join();
     }
 }
+
+
+void TemperatureField::numerical_solve_step_cuda(NuemricalWorkspace& workspace,
+                                                 const int block_count,
+                                                 const int threads_per_block) {
+    launch_heat_diffusion_step(*this, workspace, block_count, threads_per_block);
+}
+
+void TemperatureField::numerical_solve_cuda(NuemricalWorkspace& workspace, const int steps,
+                                            const int block_count, const int threads_per_block) {
+    if (steps < 0) {
+        throw std::invalid_argument("step must be non-negative");
+    }
+
+    for (std::size_t i = 0; i < steps; ++i) {
+        numerical_solve_step_cuda(workspace, block_count, threads_per_block);
+        temperature_.swap(workspace.temperature_cache);
+    }
+}
+
 
 // ============================================================================
 // 解析解(暂时只支持正弦场）
