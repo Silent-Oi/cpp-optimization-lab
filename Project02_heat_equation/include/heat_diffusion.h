@@ -18,15 +18,14 @@ class TemperatureField {
     const std::vector<double>& get_temperature() const;
 
     void numerical_solve_step(NuemricalWorkspace& workspace);
-    void numerical_solve_step_cuda(NuemricalWorkspace& workspace,
-                                                     double*& old_temperature,
-                                                     double*& new_temperature,
-                                                     const int threads_per_block, const int step);
+    void numerical_solve_step_cuda(NuemricalWorkspace& workspace, double*& old_temperature,
+                                   double*& new_temperature, const int block_count,
+                                   const int threads_per_block, const int step);
     void numerical_solve_step(NuemricalWorkspace& workspace, const std::size_t begin,
                               const std::size_t end);
 
     void numerical_solve(NuemricalWorkspace& workspace, const int steps);
-    void numerical_solve_cuda(NuemricalWorkspace& workspace, const int steps,
+    float numerical_solve_cuda(NuemricalWorkspace& workspace, const int steps,
                               const int threads_per_block);
     void analytical_solve(const double thermal_diffusivity, const double time);
 

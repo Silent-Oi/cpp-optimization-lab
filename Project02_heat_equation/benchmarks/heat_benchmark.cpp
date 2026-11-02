@@ -320,7 +320,6 @@ HeatDiffusionConfig parallel_config{
     parallel_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 512, 7, 0.01, 12, 16,
 };
 
-
 static double benchmark(heat_diffusion::TemperatureField& bench_field,
                         heat_diffusion::NuemricalWorkspace& workspace, const int steps,
                         const std::size_t thread_count) {
@@ -385,6 +384,11 @@ static void run(const std::string& data, const std::string& experiment_name,
 
 namespace cuda_experiment {
 
+struct CudaTiming {
+    double total_time_ns;
+    float kernel_time_ns;
+};
+
 heat_diffusion::Grid2D cuda_grid{
     1024,
     1024,
@@ -396,21 +400,24 @@ HeatDiffusionConfig cuda_config{
     cuda_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 512, 7, 0.01, 12, 16,
 };
 
-
-static double benchmark(heat_diffusion::TemperatureField& bench_field,
-                        heat_diffusion::NuemricalWorkspace& workspace, const int steps,
-                        const int threads_per_block) {
+static CudaTiming benchmark(heat_diffusion::TemperatureField& bench_field,
+                            heat_diffusion::NuemricalWorkspace& workspace, const int steps,
+                            const int threads_per_block) {
     const auto start = std::chrono::steady_clock::now();
-    bench_field.numerical_solve_cuda(workspace, steps, threads_per_block);
+    float kernel_time_ns = bench_field.numerical_solve_cuda(workspace, steps, threads_per_block);
     const auto end = std::chrono::steady_clock::now();
-    return std::chrono::duration<double>(end - start).count();
+    double total_time_ns = std::chrono::duration<double>(end - start).count() * 1e9;
+    return {
+        total_time_ns,
+        kernel_time_ns,
+    };
 }
 
 static void run(const std::string& data, const std::string& experiment_name,
                 const std::string& filename, const HeatDiffusionConfig& experience_config) {
     std::ofstream csv =
         common::create_result_csv(PROJECT02_SOURCE_DIR, data, experiment_name, filename);
-    csv << "threads,nx,ny,thermal_diffusivity,dt,steps,ns_per_calu\n";
+    csv << "threads,nx,ny,thermal_diffusivity,dt,steps,total_ns_per_calu,kernel_ns_per_calu\n";
 
     std::cout << std::setprecision(10);
     csv << std::setprecision(10);
@@ -441,16 +448,19 @@ static void run(const std::string& data, const std::string& experiment_name,
 
     for (std::size_t i = 0; i < experiment_count; ++i) {
         bench_field = initial_field;
-        double run_time_second =
+        CudaTiming cuda_time =
             benchmark(bench_field, workspace, experience_config.steps, threads_per_block);
 
-        double ns_per_calu = run_time_second * 1e9 / calu_counts;
+        double total_ns_per_calu = cuda_time.total_time_ns / calu_counts;
+        double kernel_ns_per_calu = cuda_time.kernel_time_ns / calu_counts;
         std::cout << "threads_per_block: " << threads_per_block << '\n';
-        std::cout << "ns_per_calu: " << ns_per_calu << '\n';
+        std::cout << "total_ns_per_calu: " << total_ns_per_calu << '\n';
+        std::cout << "kernel_ns_per_calu: " << kernel_ns_per_calu << '\n';
         std::cout << '\n';
         csv << threads_per_block << ',' << experience_config.gird.nx << ','
             << experience_config.gird.ny << ',' << experience_config.thermal_diffusivity << ','
-            << experience_config.dt << ',' << experience_config.steps << ',' << ns_per_calu << '\n';
+            << experience_config.dt << ',' << experience_config.steps << ',' << total_ns_per_calu
+            << ',' << kernel_ns_per_calu << '\n';
 
         threads_per_block = threads_per_block * 2;
     }
@@ -459,10 +469,10 @@ static void run(const std::string& data, const std::string& experiment_name,
 
 int main() {
     auto data = common::make_run_timestamp();
-    std::string experiment_name = "parallel_experiment";
-    std::string filename = "parallel_experiment";
+    std::string experiment_name = "cuda_experiment";
+    std::string filename = "cuda_experiment";
 
     const ErrorExperimentType error_experiment_type = ErrorExperimentType::CudaAccuracy;
 
-    parallel_experiment::run(data, experiment_name, filename, parallel_experiment::parallel_config);
+    cuda_experiment::run(data, experiment_name, filename, cuda_experiment::cuda_config);
 }

@@ -40,14 +40,13 @@ namespace heat_diffusion {
 
 void launch_heat_diffusion_step(heat_diffusion::Grid2D& grid, NuemricalWorkspace& workspace,
                                 double*& old_temperature, double*& new_temperature,
-                                const int threads_per_block, const int step) {
+                                const int block_count, const int threads_per_block,
+                                const int step) {
     const int number_y = grid.ny;
     const int number_x = grid.nx;
     const double rx = workspace.rx;
     const double ry = workspace.ry;
     const double rc = workspace.rc;
-
-    const int block_count = (number_y * number_x + threads_per_block - 1) / threads_per_block;
 
     if (step % 2 == 0) {
         heat_diffusion_step_kernel<<<block_count, threads_per_block>>>(
@@ -60,13 +59,14 @@ void launch_heat_diffusion_step(heat_diffusion::Grid2D& grid, NuemricalWorkspace
 
 void TemperatureField::numerical_solve_step_cuda(NuemricalWorkspace& workspace,
                                                  double*& old_temperature, double*& new_temperature,
-                                                 const int threads_per_block, const int step) {
-    launch_heat_diffusion_step(grid_, workspace, old_temperature, new_temperature,
+                                                 const int block_count, const int threads_per_block,
+                                                 const int step) {
+    launch_heat_diffusion_step(grid_, workspace, old_temperature, new_temperature, block_count,
                                threads_per_block, step);
 }
 
-void TemperatureField::numerical_solve_cuda(NuemricalWorkspace& workspace, const int steps,
-                                            const int threads_per_block) {
+float TemperatureField::numerical_solve_cuda(NuemricalWorkspace& workspace, const int steps,
+                                             const int threads_per_block) {
     if (threads_per_block <= 0 || threads_per_block > 1024) {
         throw std::invalid_argument("线程数超了");
     }
@@ -75,9 +75,13 @@ void TemperatureField::numerical_solve_cuda(NuemricalWorkspace& workspace, const
         throw std::invalid_argument("step must be non-negative");
     }
 
+    const int number_y = grid_.ny;
+    const int number_x = grid_.nx;
+
     std::size_t temperature_bytes = temperature_.size() * sizeof(double);
     double* old_temperature = nullptr;
     double* new_temperature = nullptr;
+    const int block_count = (number_y * number_x + threads_per_block - 1) / threads_per_block;
 
     cudaError_t status = cudaMalloc(&old_temperature, temperature_bytes);
     if (status != cudaSuccess) {
@@ -113,19 +117,52 @@ void TemperatureField::numerical_solve_cuda(NuemricalWorkspace& workspace, const
         throw std::invalid_argument("报错了");
     }
 
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
     for (std::size_t i = 0; i < steps; ++i) {
-        numerical_solve_step_cuda(workspace, old_temperature, new_temperature, threads_per_block,
-                                  i);
+        numerical_solve_step_cuda(workspace, old_temperature, new_temperature, block_count,
+                                  threads_per_block, i);
 
         status = cudaGetLastError();
         if (status != cudaSuccess) {
             printf("%s\n", cudaGetErrorString(status));
             cudaFree(old_temperature);
             cudaFree(new_temperature);
+            cudaEventDestroy(start);
+            cudaEventDestroy(stop);
             throw std::runtime_error("kernel launch failed");
         }
-
     }
+
+    cudaEventRecord(stop);
+    status = cudaEventSynchronize(stop);
+    if (status != cudaSuccess) {
+        printf("%s\n", cudaGetErrorString(status));
+        cudaFree(old_temperature);
+        cudaFree(new_temperature);
+        cudaEventDestroy(start);
+        cudaEventDestroy(stop);
+        throw std::runtime_error("同步出错");
+    }
+
+    float elapsed_ms = 0.0f;
+    status = cudaEventElapsedTime(&elapsed_ms, start, stop);
+
+    if (status != cudaSuccess) {
+        printf("%s\n", cudaGetErrorString(status));
+        cudaFree(old_temperature);
+        cudaFree(new_temperature);
+        cudaEventDestroy(start);
+        cudaEventDestroy(stop);
+        throw std::runtime_error("计时出错");
+    }
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 
     if (steps % 2 != 0) {
         status = cudaMemcpy(workspace.temperature_cache.data(), new_temperature, temperature_bytes,
@@ -150,6 +187,10 @@ void TemperatureField::numerical_solve_cuda(NuemricalWorkspace& workspace, const
     }
     cudaFree(old_temperature);
     cudaFree(new_temperature);
+
+    float elapsed_ns = elapsed_ms * 1e6;
+
+    return elapsed_ns;
 }
 
 }  // namespace heat_diffusion

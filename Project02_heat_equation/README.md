@@ -2,7 +2,7 @@
 
 > Two-dimensional heat diffusion, numerical verification, and CPU/GPU execution.
 
-**状态：前三阶段已完成，具备 CPU 单线程与多线程差分推进、数值实验，以及带鼠标单点加热／冷却的温度场显示。当前推进 CUDA 基础实现与验证。**
+**前四阶段已完成。CPU 与 CUDA 差分求解器已通过数值对照，当前进入第五阶段的执行成本分析与优化。**
 
 ## 项目成果
 
@@ -14,7 +14,7 @@
 
 ## 技术路线与当前入口
 
-六个阶段、完成边界和设计原则见 [技术路线](docs/roadmap.md)。
+当前实验从已有的 512 步求解计时接入，先测量 GPU 连续推进占整次求解的时间比例。实验起点与完成条件见[第五阶段](docs/roadmap.md#5-cpugpu-执行成本与瓶颈优化)。
 
 已实现双线性温度插值、固定正负色标、RGFW 窗口、固定时间步推进及单节点温度交互。CPU 与 CUDA 实现统一接入 `heat_core`；构建本项目需要 CUDA Toolkit。
 
@@ -37,7 +37,7 @@ Project02_heat_equation/
 └─ README.md
 ```
 
-`heat_core`、`heat_tests`、`heat_benchmark` 和 `heat_visualizer` 已接入构建；支持均匀场、单正弦场初始化，以及单线程和多线程 CPU 差分推进。CUDA 基础实现已加入，完整的 CPU/GPU 数值对照与设备数据驻留仍在完善。
+`heat_core` 支持均匀场、单正弦场初始化，以及 CPU 单线程、多线程和 CUDA 差分推进。一次 CUDA 求解在显存中交替使用两个温度缓冲区，完成指定步数后将最终温度场传回主机。`heat_tests` 的当前入口将 CUDA 结果与正弦模态解析解逐点比较。`heat_benchmark` 用于数值与性能实验，`heat_visualizer` 连续运行时使用 CUDA 求解，按 N 单步推进时使用 CPU 求解。
 
 ## 构建
 

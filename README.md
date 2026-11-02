@@ -19,11 +19,11 @@
 
 批量计算大量参数不同的欠阻尼振子，包含 AoS/SoA、自动向量化、简单多线程、五组性能实验和相空间显示。已于 2026-10-09 正式结束，详见[项目评价与已知局限](Project01_batch_oscillator/docs/project_evaluation.md)。
 
-当前推进 [Project02 — CPU/CUDA Heat Equation](Project02_heat_equation/README.md)，已完成 CPU 单线程与多线程差分实现、数值与性能实验，以及带鼠标单点加热／冷却的温度场显示。前三阶段已完成，当前推进 CUDA 基础实现与验证；构建 Project02 需要 CUDA Toolkit。
+当前推进 [Project02 — CPU/CUDA Heat Equation](Project02_heat_equation/README.md)。CPU 单线程、多线程与 CUDA 后端均已实现，可在交互窗口中对温度场进行单点加热或冷却。前四阶段已完成，当前进入 CPU/GPU 执行成本分析。构建 Project02 需要 CUDA Toolkit。
 
 ## 技术路线
 
-[查看技术路线](docs/roadmap.md)
+CUDA 从 P2 的规则网格扩散延伸到 P3 的稀疏矩阵运算与迭代求解。图形路线从 P4 的 CPU 光线追踪器起步，P5 引入 CUDA 像素采样，随后在同一个渲染器中研究 BVH 遍历与 CPU/GPU 性能。各项目的目标与阶段安排见[技术路线](docs/roadmap.md)。
 
 ## 仓库结构
 
@@ -31,7 +31,7 @@
 cpp-optimization-lab/
 ├─ Project00_common/             # 公共组件入口
 ├─ Project01_batch_oscillator/   # 欠阻尼振子
-├─ Project02_heat_equation/     # CPU/CUDA 热扩散（前三阶段完成）
+├─ Project02_heat_equation/     # CPU/CUDA 热扩散（前四阶段完成）
 ├─ docs/
 │  └─ roadmap.md                 # 总体技术路线
 ├─ CMakeLists.txt
