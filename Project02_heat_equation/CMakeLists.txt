@@ -1,4 +1,5 @@
 add_library(heat_core STATIC
+    include/heat_diffusion.h
     src/heat_diffusion.cpp
     cuda/cuda_heat_diffusion.cu
     cuda/cuda_heat_diffusion.h
@@ -7,7 +8,7 @@ add_library(heat_core STATIC
 target_include_directories(heat_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/cuda
-    PRIVATE
+    PUBLIC
         ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
 )
 target_link_libraries(heat_core PUBLIC cpp_lab_common)
@@ -26,6 +27,14 @@ set_target_properties(heat_core PROPERTIES
 
 target_compile_options(heat_core PRIVATE
     "$<$<COMPILE_LANGUAGE:CUDA>:--utf-8>"
+)
+
+add_executable(heat_main
+    apps/heat_diffusion_main.cpp
+)
+
+target_link_libraries(heat_main
+    PRIVATE heat_core
 )
 
 add_executable(heat_benchmark
