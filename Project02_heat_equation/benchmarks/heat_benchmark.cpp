@@ -309,6 +309,18 @@ static void run(const std::string& data, const std::string& experiment_name,
 
 namespace parallel_experiment {
 
+heat_diffusion::Grid2D parallel_grid{
+    1024,
+    1024,
+    1.0 / 1023,
+    1.0 / 1023,
+};
+
+HeatDiffusionConfig parallel_config{
+    parallel_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 512, 7, 0.01, 12, 16,
+};
+
+
 static double benchmark(heat_diffusion::TemperatureField& bench_field,
                         heat_diffusion::NuemricalWorkspace& workspace, const int steps,
                         const std::size_t thread_count) {
@@ -374,14 +386,14 @@ static void run(const std::string& data, const std::string& experiment_name,
 namespace cuda_experiment {
 
 heat_diffusion::Grid2D cuda_grid{
-    512,
-    512,
-    1.0 / 511,
-    1.0 / 511,
+    1024,
+    1024,
+    1.0 / 1023,
+    1.0 / 1023,
 };
 
 HeatDiffusionConfig cuda_config{
-    cuda_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 512, 6, 0.01, 12, 12,
+    cuda_grid, heat_diffusion::InitialField::SineMode, 128, 1e-5, 512, 7, 0.01, 12, 16,
 };
 
 
@@ -452,5 +464,5 @@ int main() {
 
     const ErrorExperimentType error_experiment_type = ErrorExperimentType::CudaAccuracy;
 
-    parallel_experiment::run(data, experiment_name, filename, default_config);
+    parallel_experiment::run(data, experiment_name, filename, parallel_experiment::parallel_config);
 }

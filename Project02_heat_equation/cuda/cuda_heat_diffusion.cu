@@ -1,9 +1,10 @@
+#include <crt/host_defines.h>
 #include <cuda_heat_diffusion.h>
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
 #include <device_launch_parameters.h>
 #include <driver_types.h>
-#include <crt/host_defines.h>
+
 #include <cstdio>
 #include <stdexcept>
 #include <vector>
@@ -37,15 +38,9 @@ __global__ void heat_diffusion_step_kernel(double* old_temperature, double* new_
 
 namespace heat_diffusion {
 
-void launch_heat_diffusion_step(TemperatureField& field, NuemricalWorkspace& workspace, const int threads_per_block) {
-
-    if (threads_per_block <= 0 || threads_per_block > 1024) {
-        throw std::invalid_argument("线程数超了");
-    }
-
-    const heat_diffusion::Grid2D& grid = field.get_grid();
-    std::vector<double> temperature = field.get_temperature();
-
+void launch_heat_diffusion_step(heat_diffusion::Grid2D& grid, NuemricalWorkspace& workspace,
+                                double*& old_temperature, double*& new_temperature,
+                                const int threads_per_block, const int step) {
     const int number_y = grid.ny;
     const int number_x = grid.nx;
     const double rx = workspace.rx;
@@ -54,8 +49,33 @@ void launch_heat_diffusion_step(TemperatureField& field, NuemricalWorkspace& wor
 
     const int block_count = (number_y * number_x + threads_per_block - 1) / threads_per_block;
 
+    if (step % 2 == 0) {
+        heat_diffusion_step_kernel<<<block_count, threads_per_block>>>(
+            old_temperature, new_temperature, number_x, number_y, rx, ry, rc);
+    } else {
+        heat_diffusion_step_kernel<<<block_count, threads_per_block>>>(
+            new_temperature, old_temperature, number_x, number_y, rx, ry, rc);
+    }
+}
 
-    std::size_t temperature_bytes = temperature.size() * sizeof(double);
+void TemperatureField::numerical_solve_step_cuda(NuemricalWorkspace& workspace,
+                                                 double*& old_temperature, double*& new_temperature,
+                                                 const int threads_per_block, const int step) {
+    launch_heat_diffusion_step(grid_, workspace, old_temperature, new_temperature,
+                               threads_per_block, step);
+}
+
+void TemperatureField::numerical_solve_cuda(NuemricalWorkspace& workspace, const int steps,
+                                            const int threads_per_block) {
+    if (threads_per_block <= 0 || threads_per_block > 1024) {
+        throw std::invalid_argument("线程数超了");
+    }
+
+    if (steps < 0) {
+        throw std::invalid_argument("step must be non-negative");
+    }
+
+    std::size_t temperature_bytes = temperature_.size() * sizeof(double);
     double* old_temperature = nullptr;
     double* new_temperature = nullptr;
 
@@ -76,7 +96,7 @@ void launch_heat_diffusion_step(TemperatureField& field, NuemricalWorkspace& wor
     }
 
     status =
-        cudaMemcpy(old_temperature, temperature.data(), temperature_bytes, cudaMemcpyHostToDevice);
+        cudaMemcpy(old_temperature, temperature_.data(), temperature_bytes, cudaMemcpyHostToDevice);
     if (status != cudaSuccess) {
         printf("%s\n", cudaGetErrorString(status));
         cudaFree(old_temperature);
@@ -93,33 +113,26 @@ void launch_heat_diffusion_step(TemperatureField& field, NuemricalWorkspace& wor
         throw std::invalid_argument("报错了");
     }
 
-    heat_diffusion_step_kernel<<<block_count, threads_per_block>>>(old_temperature, new_temperature,
-                                                                   number_x, number_y, rx, ry, rc);
-    status = cudaGetLastError();
-    if (status != cudaSuccess) {
-        printf("%s\n", cudaGetErrorString(status));
-        cudaFree(old_temperature);
-        cudaFree(new_temperature);
-        throw std::invalid_argument("报错了");
+    for (std::size_t i = 0; i < steps; ++i) {
+        numerical_solve_step_cuda(workspace, old_temperature, new_temperature, threads_per_block,
+                                  i);
     }
 
-    status = cudaDeviceSynchronize();
-    if (status != cudaSuccess) {
-        printf("%s\n", cudaGetErrorString(status));
-        cudaFree(old_temperature);
-        cudaFree(new_temperature);
-        throw std::invalid_argument("报错了");
-    }
+    if (steps % 2 != 0) {
+        status = cudaMemcpy(workspace.temperature_cache.data(), new_temperature, temperature_bytes,
+                            cudaMemcpyDeviceToHost);
+        if (status != cudaSuccess) {
+            printf("%s\n", cudaGetErrorString(status));
+            cudaFree(old_temperature);
+            cudaFree(new_temperature);
+            throw std::invalid_argument("报错了");
+        }
+        temperature_.swap(workspace.temperature_cache);
 
-    status = cudaMemcpy(workspace.temperature_cache.data(), new_temperature, temperature_bytes,
-                        cudaMemcpyDeviceToHost);
-    if (status != cudaSuccess) {
-        printf("%s\n", cudaGetErrorString(status));
-        cudaFree(old_temperature);
-        cudaFree(new_temperature);
-        throw std::invalid_argument("报错了");
+    } else {
+        status = cudaMemcpy(temperature_.data(), old_temperature, temperature_bytes,
+                            cudaMemcpyDeviceToHost);
     }
-
     cudaFree(old_temperature);
     cudaFree(new_temperature);
 }

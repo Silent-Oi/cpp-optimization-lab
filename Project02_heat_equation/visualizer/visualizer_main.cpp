@@ -108,7 +108,7 @@ int main() {
             visualizer::apply_heat_brush(window, mx, my, work_field, buffer, brush_power,
                                          time,
                                          thermal_diffusivity, k);
-            work_field.numerical_solve_parallel(workspace, steps, 4);
+            work_field.numerical_solve_cuda(workspace, steps, 256);
             map_grid_to_buffer(work_field, buffer, std::abs(initial_temperature), light_red,
                                light_blue);
             RGFW_window_blitSurface(window, surface);

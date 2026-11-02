@@ -269,24 +269,6 @@ void TemperatureField::numerical_solve_parallel(NuemricalWorkspace& workspace, c
     }
 }
 
-
-void TemperatureField::numerical_solve_step_cuda(NuemricalWorkspace& workspace,
-                                                 const int threads_per_block) {
-    launch_heat_diffusion_step(*this, workspace, threads_per_block);
-}
-
-void TemperatureField::numerical_solve_cuda(NuemricalWorkspace& workspace, const int steps, const int threads_per_block) {
-    if (steps < 0) {
-        throw std::invalid_argument("step must be non-negative");
-    }
-
-    for (std::size_t i = 0; i < steps; ++i) {
-        numerical_solve_step_cuda(workspace, threads_per_block);
-        temperature_.swap(workspace.temperature_cache);
-    }
-}
-
-
 // ============================================================================
 // 解析解(暂时只支持正弦场）
 // ============================================================================

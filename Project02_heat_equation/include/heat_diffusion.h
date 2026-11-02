@@ -18,7 +18,10 @@ class TemperatureField {
     const std::vector<double>& get_temperature() const;
 
     void numerical_solve_step(NuemricalWorkspace& workspace);
-    void numerical_solve_step_cuda(NuemricalWorkspace& workspace, const int threads_per_block);
+    void numerical_solve_step_cuda(NuemricalWorkspace& workspace,
+                                                     double*& old_temperature,
+                                                     double*& new_temperature,
+                                                     const int threads_per_block, const int step);
     void numerical_solve_step(NuemricalWorkspace& workspace, const std::size_t begin,
                               const std::size_t end);
 

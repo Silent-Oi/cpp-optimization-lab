@@ -122,7 +122,7 @@ def main():
         ax.set_xscale("log", base=2)
         ax.set_xticks(blocks, labels=[str(count) for count in blocks])
         ax.set_xlim(min(blocks) / 1.2, max(blocks) * 1.2)
-        ax.set_xlabel("CUDA threads per block (CSV threads column)")
+        ax.set_xlabel("CUDA threads per block")
         ax.grid(True, alpha=0.25)
 
     fig.suptitle("CUDA vs single-thread CPU: solve-call performance"

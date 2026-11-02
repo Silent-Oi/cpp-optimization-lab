@@ -15,7 +15,7 @@ python Project02_heat_equation/benchmarks/scripts/plot_cuda_performance_comparis
 
 性能图横轴是 CUDA 每 block 的线程数，不是 CPU 线程数或 GPU 总线程数。左图比较 `ns_per_calu`，其归一化分母为 `nx × ny × steps`；右图为 `CPU time / CUDA time`，大于 1 表示 CUDA 更快，小于 1 表示 CPU 更快。两图的纵轴均取对数以显示跨度较大的结果。每条记录是原始单次测量，不标作均值或中位数。
 
-当前 CUDA 数据使用主机时钟包住完整求解调用，每步包含设备分配、H2D/D2H 传输、kernel、同步及释放，结果显示求解调用成本，不能作为纯 kernel 性能。CPU 计时也包住求解调用，初始化和工作区准备在计时前。现有 CSV 无法拆分 kernel、传输及资源管理成本；脚本不重跑实验，也不验证历史构建配置和硬件条件。
+CUDA 数据使用主机时钟包住完整求解调用，结果包含设备分配、H2D/D2H 传输、kernel 执行、等待结果完成及释放，不能作为纯 kernel 性能。当前实现将分配与初始传输放在时间步循环前，在设备上连续推进后回传最终结果；历史逐步传输实现与当前版本需按运行时间标识区分。CPU 计时也包住求解调用，初始化和工作区准备在计时前。现有 CSV 无法拆分 kernel、传输及资源管理成本；脚本不重跑实验，也不验证历史构建配置和硬件条件。
 
 两个脚本顶部均可修改 `DEFAULT_EXPERIMENT`（CUDA 文件名前缀）和 `CPU_EXPERIMENT`，也支持 `--experiment`、`--cpu-experiment`；用 `--timestamp` 指定 CUDA 时间标识、`--cpu-timestamp` 指定 CPU 时间标识，`--show` 同时打开窗口。默认选择各自最新文件，不因配置不匹配而静默改用另一份历史结果。
 
