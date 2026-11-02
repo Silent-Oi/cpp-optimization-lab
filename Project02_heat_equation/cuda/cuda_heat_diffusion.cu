@@ -116,6 +116,15 @@ void TemperatureField::numerical_solve_cuda(NuemricalWorkspace& workspace, const
     for (std::size_t i = 0; i < steps; ++i) {
         numerical_solve_step_cuda(workspace, old_temperature, new_temperature, threads_per_block,
                                   i);
+
+        status = cudaGetLastError();
+        if (status != cudaSuccess) {
+            printf("%s\n", cudaGetErrorString(status));
+            cudaFree(old_temperature);
+            cudaFree(new_temperature);
+            throw std::runtime_error("kernel launch failed");
+        }
+
     }
 
     if (steps % 2 != 0) {
@@ -132,6 +141,12 @@ void TemperatureField::numerical_solve_cuda(NuemricalWorkspace& workspace, const
     } else {
         status = cudaMemcpy(temperature_.data(), old_temperature, temperature_bytes,
                             cudaMemcpyDeviceToHost);
+        if (status != cudaSuccess) {
+            printf("%s\n", cudaGetErrorString(status));
+            cudaFree(old_temperature);
+            cudaFree(new_temperature);
+            throw std::invalid_argument("报错了");
+        }
     }
     cudaFree(old_temperature);
     cudaFree(new_temperature);

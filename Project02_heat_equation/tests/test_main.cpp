@@ -15,6 +15,6 @@ int main() {
     // heat_diffusion::test_numberical_solve(0.001, 1000, 0.0001, 1e-5);
     //heat_diffusion::test_numberical_solve_parallel(thermal_diffusivity, steps, dt, thread_count,tolerance);
     //heat_diffusion::test_numerical_solve_step_cuda(thermal_diffusivity, dt, 128, tolerance);
-    heat_diffusion::test_numerical_solve_cuda(thermal_diffusivity, dt, steps, 128, tolerance);
+    heat_diffusion::test_numerical_solve_cuda(thermal_diffusivity, dt, steps, 211, tolerance);
 
 }
